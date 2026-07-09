@@ -1,0 +1,20 @@
+# Plantilla de servicio systemd por cliente.
+# Copiar a /etc/systemd/system/gunicorn-<CLIENTE>.service y reemplazar <CLIENTE> y <CARPETA>.
+#   sudo systemctl daemon-reload && sudo systemctl enable --now gunicorn-<CLIENTE>
+[Unit]
+Description=Gunicorn LAFT - <CLIENTE>
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=<CARPETA>
+EnvironmentFile=<CARPETA>/.env
+ExecStart=<CARPETA>/venv/bin/gunicorn \
+    --workers 3 \
+    --bind unix:<CARPETA>/gunicorn.sock \
+    gestor_listas.wsgi:application
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

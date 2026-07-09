@@ -1,0 +1,109 @@
+{% extends "core_admin/base_admin.html" %}
+
+{% block title %}{{ titulo }} | Panel de Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1 class="h2">{{ titulo }}</h1>
+</div>
+<p class="text-muted">
+    Selecciona un mes para ver el detalle de consultas por día.
+</p>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="{% url 'core_admin:reporte_mensual' %}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="month_selector" class="form-label fw-bold">Seleccionar Mes:</label>
+                <input type="month" class="form-control" id="month_selector" name="month_selector" value="{{ selected_month_form_value }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card text-white bg-primary shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Consultas Totales en el Mes</h5>
+                <h2 class="mb-0">{{ total_consultas_mes }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-bar-chart-fill"></i> Detalle de Consultas Diarias
+            </div>
+            <div class="card-body">
+                {% if total_consultas_mes > 0 %}
+                    <canvas id="consultasDiaChart"></canvas>
+                {% else %}
+                    <p class="text-center text-muted p-5">No se encontraron consultas para el mes seleccionado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if total_consultas_mes > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('consultasDiaChart').getContext('2d');
+        
+        // Obtenemos los datos desde el contexto de Django
+        const chartLabels = JSON.parse('{{ chart_labels_json|safe }}');
+        const chartData = JSON.parse('{{ chart_data_json|safe }}');
+
+        new Chart(ctx, {
+            type: 'bar', // Gráfico de Barras
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Consultas Diarias',
+                    data: chartData,
+                    borderColor: '#1b7783',
+                    backgroundColor: 'rgba(27, 119, 131, 0.5)',
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        ticks: {
+                            // Asegurar que solo se muestren números enteros en el eje Y
+                            stepSize: 1
+                        }
+                    } 
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                // Formatear el tooltip para que muestre una fecha legible
+                                const date = new Date(context[0].label);
+                                return date.toLocaleDateString('es-CO', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

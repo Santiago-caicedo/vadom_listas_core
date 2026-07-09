@@ -1,0 +1,84 @@
+{% extends "core_admin/base_admin.html" %}
+
+{% block title %}{{ titulo }} | Panel de Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="h2">{{ titulo }}</h1>
+    <a href="{% url 'core_admin:lote_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver a la lista
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-pencil-square"></i> Procesar Solicitud
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Cambiar Estado:</label>
+                        {{ form.estado }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Subir PDF de Resultado:</label>
+                        {{ form.archivo_resultado }}
+                        {% if lote.archivo_resultado %}
+                            <div class="mt-2 text-muted small">
+                                Archivo actual: <a href="{{ lote.archivo_resultado.url }}" download>{{ lote.archivo_resultado.name }}</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-circle"></i> Guardar Cambios y Notificar al Cliente
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Detalles del Lote
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <strong>Empresa:</strong>
+                        <span>{{ lote.empresa.nombre }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <strong>Usuario:</strong>
+                        <span>{{ lote.usuario_solicitante.username }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <strong>Email:</strong>
+                        <span>{{ lote.usuario_solicitante.email }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <strong>Fecha Solicitud:</strong>
+                        <span>{{ lote.fecha_solicitud|date:"Y-m-d H:i" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <strong>Estado Actual:</strong>
+                        <span>{{ lote.get_estado_display }}</span>
+                    </li>
+                </ul>
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ lote.archivo_subido.url }}" class="btn btn-outline-primary" download>
+                        <i class="bi bi-download"></i> Descargar Excel del Cliente
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

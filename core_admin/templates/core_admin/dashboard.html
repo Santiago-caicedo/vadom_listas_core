@@ -1,0 +1,134 @@
+{% extends "core_admin/base_admin.html" %}
+
+{% block title %}Dashboard | Panel de Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="h2">{{ titulo }}</h1>
+    <p class="text-muted">Métricas globales del sistema.</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card text-white bg-primary shadow-sm">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title">Consultas Totales</h5>
+                    <h2 class="mb-0">{{ total_consultas }}</h2>
+                </div>
+                <i class="bi bi-search" style="font-size: 3rem; opacity: 0.5;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card text-white bg-danger shadow-sm">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title">Lotes Pendientes</h5>
+                    <h2 class="mb-0">{{ lotes_pendientes }}</h2>
+                </div>
+                <i class="bi bi-files" style="font-size: 3rem; opacity: 0.5;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card text-white bg-success shadow-sm">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title">Empresas Activas</h5>
+                    <h2 class="mb-0">{{ total_empresas }}</h2>
+                </div>
+                <i class="bi bi-building" style="font-size: 3rem; opacity: 0.5;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card text-white bg-info shadow-sm">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title">Usuarios Activos</h5>
+                    <h2 class="mb-0">{{ total_usuarios }}</h2>
+                </div>
+                <i class="bi bi-people-fill" style="font-size: 3rem; opacity: 0.5;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-bar-chart-fill"></i> Consultas por Mes (Histórico)
+            </div>
+            <div class="card-body">
+                <canvas id="consultasChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-building"></i> Actividad por Empresa
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th>Consultas</th>
+                            <th>Lotes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for empresa in empresas_data %}
+                        <tr>
+                            <td>{{ empresa.nombre }}</td>
+                            <td>{{ empresa.num_consultas }}</td>
+                            <td>{{ empresa.num_lotes }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center">No hay empresas registradas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('consultasChart').getContext('2d');
+        
+        // Obtenemos los datos desde el contexto de Django
+        const chartLabels = JSON.parse('{{ chart_labels|safe }}');
+        const chartData = JSON.parse('{{ chart_data|safe }}');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Consultas Realizadas',
+                    data: chartData,
+                    borderColor: '#1b7783',
+                    backgroundColor: 'rgba(27, 119, 131, 0.2)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    });
+</script>
+{% endblock %}

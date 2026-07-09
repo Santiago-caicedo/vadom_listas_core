@@ -1,0 +1,230 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Consulta - {{ busqueda.termino_buscado }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 10px; color: #888;
+            }
+        }
+        body { font-family: 'Roboto', sans-serif; font-size: 11px; color: #333; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1b7783; padding-bottom: 10px; margin-bottom: 20px; }
+        .header img { max-height: 60px; }
+        .header h1 { color: #1b7783; font-size: 22px; margin: 0; }
+        .section { margin-bottom: 20px; padding: 10px 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+        .section-title { font-size: 14px; font-weight: bold; color: #1b7783; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .info-item strong { display: block; color: #555; font-size: 10px; }
+        .finding { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #ccc; }
+        .finding:last-child { border-bottom: none; }
+        
+        /* Estilos base para el encabezado del hallazgo */
+        .finding-header { 
+            font-weight: bold; background-color: #e9ecef; padding: 6px 10px; 
+            border-radius: 3px; margin-bottom: 8px; font-size: 12px;
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        /* Clases condicionales para el fondo y borde del encabezado */
+        .finding-header.clasificacion-rojo { background-color: #f8d7da; border-left: 5px solid #dc3545; }
+        .finding-header.clasificacion-amarillo { background-color: #fff3cd; border-left: 5px solid #ffc107; }
+        .finding-header.clasificacion-peps { background-color: #cff4fc; border-left: 5px solid #0dcaf0; }
+        
+        .finding-details { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+        .finding-details strong { color: #1b7783; }
+        .finding-details p { margin: 0 0 5px 0; } 
+        
+        /* Estilo base del badge */
+        .badge { padding: 3px 8px; border-radius: 10px; font-weight: bold; display: inline-block; font-size: 10px; line-height: 1; vertical-align: middle; }
+        /* Clases condicionales para el color del badge */
+        .badge.clasificacion-rojo { background-color: #dc3545; color: white; }
+        .badge.clasificacion-amarillo { background-color: #ffc107; color: #333; }
+        .badge.clasificacion-peps { background-color: #0dcaf0; color: #333; }
+        .badge.clasificacion-no-clasificado { background-color: #6c757d; color: white; }
+
+        .sources-section { margin-top: 25px; page-break-inside: avoid; }
+        .sources-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; font-size: 9px; }
+        .sources-grid h3 { font-size: 11px; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 2px; margin-top: 0; margin-bottom: 5px; }
+        .sources-grid ul { list-style-type: '✓ '; padding-left: 15px; margin: 0; line-height: 1.4; }
+        .disclaimer { margin-top: 20px; padding: 10px; border-top: 1px solid #eee; font-size: 9px; color: #666; page-break-inside: avoid; }
+        .footer { font-size: 9px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img src="{% static 'images/logo_vadom.png' %}" alt="Logo">
+        <h1>Reporte de Consulta</h1>
+    </header>
+
+    <section class="section">
+        <h2 class="section-title">Información del Perfil Consultado</h2>
+        <div class="info-grid">
+             <div class="info-item"><strong>Término de Búsqueda:</strong><span>{{ busqueda.termino_buscado }}</span></div>
+            <div class="info-item"><strong>Fecha de Consulta:</strong><span>{{ busqueda.fecha_busqueda|date:"d/m/Y, h:i A" }}</span></div>
+            <div class="info-item"><strong>Usuario que Consulta:</strong><span>{{ busqueda.usuario.username }}</span></div>
+            <div class="info-item" style="grid-column: span 2;"> <strong>Resumen de Hallazgos por Clasificación:</strong>
+                <span style="display: block; margin-top: 5px;">
+                    {# Contamos los resultados para cada clasificación #}
+                    {% with resultados=busqueda.resultados.all %}
+                        {% regroup resultados by clasificacion as resultados_agrupados %}
+                        {% for grupo in resultados_agrupados %}
+                            {% if grupo.grouper == 'Rojo' %}
+                                <span class="badge" style="background-color: #dc3545; color: white; margin-right: 5px;">Rojo: {{ grupo.list|length }}</span>
+                            {% elif grupo.grouper == 'Amarillo' %}
+                                <span class="badge" style="background-color: #ffc107; color: #333; margin-right: 5px;">Amarillo: {{ grupo.list|length }}</span>
+                            {% elif grupo.grouper == "PEP's" %}
+                                <span class="badge" style="background-color: #0dcaf0; color: #333; margin-right: 5px;">PEP's: {{ grupo.list|length }}</span>
+                            {% elif grupo.grouper == 'No Clasificado' %}
+                                {# Opcional: Mostrar los No Clasificados #}
+                                {% comment %} <span class="badge" style="background-color: #6c757d; color: white; margin-right: 5px;">No Clasificado: {{ grupo.list|length }}</span> {% endcomment %}
+                            {% endif %}
+                        {% endfor %}
+                        {# Mensaje si no hubo ningún hallazgo #}
+                        {% if not resultados %}
+                            <span class="badge" style="background-color: #6c757d; color: white;">Sin Hallazgos</span>
+                        {% endif %}
+                    {% endwith %}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="section-title">Expediente de Hallazgos Encontrados ({{ busqueda.resultados.count }})</h2>
+        {% for resultado in busqueda.resultados.all %}
+            <div class="finding">
+                <div class="finding-header 
+                            {% if resultado.clasificacion == 'Rojo' %}clasificacion-rojo{% endif %}
+                            {% if resultado.clasificacion == 'Amarillo' %}clasificacion-amarillo{% endif %}
+                            {% if resultado.clasificacion == 'PEP\'s' %}clasificacion-peps{% endif %}
+                            ">
+                    <span>{{ resultado.nombre_completo }} (ID: {{ resultado.identificacion }})</span>
+                    
+                    <span class="badge 
+                                {% if resultado.clasificacion == 'Rojo' %}clasificacion-rojo{% endif %}
+                                {% if resultado.clasificacion == 'Amarillo' %}clasificacion-amarillo{% endif %}
+                                {% if resultado.clasificacion == 'PEP\'s' %}clasificacion-peps{% endif %}
+                                {% if resultado.clasificacion == 'No Clasificado' %}clasificacion-no-clasificado{% endif %}
+                                ">
+                        {{ resultado.clasificacion }}
+                    </span>
+                </div>
+                <div class="finding-details">
+                    <div>
+                        <p><strong>Tipo de Lista:</strong><br>{{ resultado.tipo_lista }}</p>
+                        <p><strong>Fuente:</strong><br>{{ resultado.fuente }}</p>
+                        <p><strong>¿Lista Restrictiva?:</strong><br>{% if resultado.es_restrictiva %}<span class="badge clasificacion-rojo">Sí</span>{% else %}<span class="badge clasificacion-no-clasificado">No</span>{% endif %}</p>
+                        <p><strong>¿Es Boletín?:</strong><br>{% if resultado.es_boletin %}Sí{% else %}No{% endif %}</p>
+                        <p><strong>Alias:</strong><br>{{ resultado.alias|default:"N/A" }}</p>
+                    </div>
+                    <div>
+                        <p><strong>Relacionado Con:</strong><br>{{ resultado.relacionado_con }}</p>
+                        <p><strong>Coincidencia ID:</strong><br>{{ resultado.coincidencia_id }}%</p>
+                        <p><strong>Coincidencia Nombre:</strong><br>{{ resultado.coincidencia_nombre }}%</p>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p>No se encontraron hallazgos para esta consulta.</p>
+        {% endfor %}
+    </section>
+
+    <section class="sources-section">
+        <h2 class="section-title">Bases de Información Consultadas</h2>
+        <p style="font-size: 10px; color: #666; margin-top: -10px; margin-bottom: 15px;">
+            Este reporte incluye resultados de múltiples fuentes nacionales e internacionales. A continuación se detallan las principales bases de datos verificadas durante esta consulta.
+        </p>
+        <div class="sources-grid">
+            <div>
+                <h3>Fuentes Nacionales</h3>
+                <ul>
+                    <li>Afiliados del régimen contributivo y subsidiado</li>
+                    <li>Boletín de Deudores Morosos del Estado (Contraloría)</li>
+                    <li>Búsqueda en medios GOOGLE RSS</li>
+                    <li>Certificado de Estado de Cédula de Ciudadanía</li>
+                    <li>Consulta Ciudadana - Personas Expuestas Políticamente (PEP)</li>
+                    <li>Consulta de inhabilidades para trabajar con menores</li>
+                    <li>Contraloría (Antecedentes Fiscales)</li>
+                    <li>Consejo Nacional Electoral</li>
+                    <li>Consejo Superior de la Judicatura</li>
+                    <li>Consejo de Estado</li>
+                    <li>Corte Constitucional</li>
+                    <li>Corte Suprema De Justicia</li>
+                    <li>DIAN (Proveedores Ficticios)</li>
+                    <li>Directorio de Servidores Públicos</li>
+                    <li>Estructura de Gobierno (Función Pública - SIGEP)</li>
+                    <li>Fuerzas Militares</li>
+                    <li>Fiscalía General de la Nación (Boletines)</li>
+                    <li>Gobernaciones y Asambleas</li>
+                    <li>Alcaldías y Concejos</li>
+                    <li>Instituto Nacional Penitenciario y Carcelario (INPEC)</li>
+                    <li>Junta Central de Contadores (Sanciones)</li>
+                    <li>Juzgados De Ejecución De Penas Y Medidas De Seguridad</li>
+                    <li>Lugar de votación</li>
+                    <li>Panamá Papers (Colombianos)</li>
+                    <li>Partidos y Movimientos Políticos</li>
+                    <li>Policía Nacional de Colombia (Antecedentes Judiciales)</li>
+                    <li>Presidencia de la República (Boletines, Extraditados)</li>
+                    <li>Procesos Judiciales de Colombia</li>
+                    <li>Procuraduría General de la Nación (Boletines, Antecedentes)</li>
+                    <li>Rama Judicial - Consulta de Procesos</li>
+                    <li>Registraduría Nacional del Estado Civil (RNEC)</li>
+                    <li>Registro Único Nacional de Tránsito (RUNT)</li>
+                    <li>Sistema Electrónico de Contratación Pública (SECOP - Sanciones)</li>
+                    <li>Situación Militar</li>
+                    <li>Superintendencia Financiera (Boletines)</li>
+                    <li>Superintendencia de Industria y Comercio (SIC - Boletines)</li>
+                    <li>Superintendencia de Sociedades (Boletines)</li>
+                    <li>Superintendencia de Economía Solidaria (Supersolidaria)</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Fuentes Internacionales</h3>
+                <ul>
+                    <li>OFAC - SDN List (Lista Clinton - EE.UU.)</li>
+                    <li>OFAC - NON SDN Lists (EE.UU.)</li>
+                    <li>ONU - Consejo de Seguridad (Listas Consolidadas)</li>
+                    <li>Banco Mundial (Empresas y Personas Inhabilitadas)</li>
+                    <li>Banco Interamericano de Desarrollo (BID - Sancionados)</li>
+                    <li>Unión Europea (Listas Consolidadas de Sanciones y Terroristas)</li>
+                    <li>HM Treasury (Lista Consolidada del Reino Unido)</li>
+                    <li>Canadá (OSFI y Lista Autónoma Consolidada de Sanciones)</li>
+                    <li>Interpol (Listas de más buscados)</li>
+                    <li>FBI (Listas de más buscados)</li>
+                    <li>DEA (Listas de más buscados)</li>
+                    <li>DSS - Bureau of Diplomatic Security (EE.UU. - Más Buscados)</li>
+                    <li>ICE (EE.UU. - Más Buscados)</li>
+                    <li>Guardia Civil Española (Más Buscados)</li>
+                    <li>NCA (Reino Unido - Más Buscados)</li>
+                    <li>CBI (India - Más Buscados)</li>
+                    <li>Departamento de Comercio (EE.UU. - Entity List, Unverified List, Denied Persons)</li>
+                    <li>Departamento de Estado (EE.UU. - AECA Debarred, FTO, Nonproliferation)</li>
+                    <li>Departamento del Tesoro (EE.UU. - CAPTA, FSE, ISA, PLC)</li>
+                    <li>Francia - Dirección General del Tesoro (FR_TREASURY)</li>
+                    <li>Offshore Leaks Database (ICIJ)</li>
+                    <li>PEPS Internacionales (Múltiples Países)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <div class="disclaimer">
+        <strong>Exclusión de Responsabilidad:</strong> 
+        La información entregada en este reporte es de origen público, recolectada de forma manual y/o automatizada desde fuentes plenamente identificadas. 
+        La responsabilidad de los datos suministrados tanto en calidad como de veracidad es delegada a la fuente de cada registro. 
+        El proveedor del servicio (y por extensión, esta plataforma) no es responsable por las decisiones que la entidad pueda tomar basada en la información suministrada. 
+        Esta información no debe ser tomada como sustento único de decisiones sino como señal de alerta que debe ser confirmada por la entidad. 
+        La obligación y responsabilidad del proveedor es de medio y no de resultado.
+    </div>
+    <footer class="footer">
+        Este reporte fue generado automáticamente por la Plataforma LAFT de Vadom Data Consulting SAS. Válido únicamente en la fecha de generación.
+    </footer>
+</body>
+</html>

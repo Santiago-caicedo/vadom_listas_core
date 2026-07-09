@@ -1,0 +1,13 @@
+# Registro de despliegues (tenants) — plantilla SIN secretos.
+# Copiar a deploy/tenants.tsv (gitignored) y mantener actualizado.
+# El detalle sensible (DB_PASSWORD, SECRET_KEY) vive SOLO en el .env de cada carpeta en el servidor.
+#
+# Columnas (separadas por TAB):
+# cliente	carpeta_servidor	dominio	s3_prefix	servicio_systemd	notas
+comertex	/opt/comertex_listas	comertex.vadomconsultas.com	comertex	gunicorn-comertex	base canónica
+esquivensa	/opt/listas_esquivensa	esquivensa.vadomconsultas.com	esquivensa	gunicorn-esquivensa	comparte repo de comertex
+automayor	/opt/automayor_listas	automayor.vadomconsultas.com	automayor	gunicorn-automayor
+campesa	/opt/campesa_listas	campesa.vadomconsultas.com	campesa	gunicorn-campesa
+golden	/opt/golden_listas	golden.vadomconsultas.com	golden	gunicorn-golden
+redp	/opt/redp_listas	redp.vadomconsultas.com	redpapaz	gunicorn-redp	prefijo S3 = redpapaz
+compas	/opt/listas_restrictivas	compas.vadomconsultas.com	compas	gunicorn-compas	repo listas_restrictivas

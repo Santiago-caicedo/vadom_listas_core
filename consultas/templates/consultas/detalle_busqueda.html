@@ -1,0 +1,599 @@
+{% extends 'consultas/base.html' %}
+
+{% block title %}Detalle de Búsqueda | Plataforma LAFT{% endblock %}
+
+{% block content %}
+<style>
+    .search-summary {
+        background: linear-gradient(135deg, #1b7783 0%, #155c66 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        color: white;
+        margin-bottom: 1.5rem;
+    }
+    .search-summary .search-term {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .search-summary .search-meta {
+        opacity: 0.85;
+        font-size: 0.9rem;
+    }
+
+    .filter-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    .filter-panel .filter-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0;
+    }
+
+    .result-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+    /* Clasificaciones */
+    .result-card.clasificacion-rojo {
+        border-left: 5px solid #dc3545;
+    }
+    .result-card.clasificacion-amarillo {
+        border-left: 5px solid #ffc107;
+    }
+    .result-card.clasificacion-pep {
+        border-left: 5px solid #0dcaf0;
+    }
+    .result-card.clasificacion-default {
+        border-left: 5px solid #6c757d;
+    }
+
+    .result-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .result-header .person-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #212529;
+        margin: 0;
+    }
+    .result-header .person-id {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    /* Badge de clasificacion grande */
+    .clasificacion-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .clasificacion-badge.rojo {
+        background-color: #dc3545;
+        color: white;
+    }
+    .clasificacion-badge.amarillo {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    .clasificacion-badge.pep {
+        background-color: #0dcaf0;
+        color: #212529;
+    }
+    .clasificacion-badge.default {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .result-body {
+        padding: 1.25rem;
+    }
+
+    /* Panel de coincidencias */
+    .coincidence-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .coincidence-panel .panel-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+    .coincidence-item {
+        margin-bottom: 0.6rem;
+    }
+    .coincidence-item:last-child {
+        margin-bottom: 0;
+    }
+    .coincidence-item .label {
+        font-size: 0.85rem;
+        color: #495057;
+        margin-bottom: 0.25rem;
+        display: flex;
+        justify-content: space-between;
+    }
+    .coincidence-item .label .percentage {
+        font-weight: 700;
+    }
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+    }
+    .progress-bar.high { background-color: #198754; }
+    .progress-bar.medium { background-color: #ffc107; }
+    .progress-bar.low { background-color: #6c757d; }
+
+    /* Info grid */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .info-item .info-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    .info-item .info-value {
+        color: #212529;
+        font-size: 0.95rem;
+    }
+
+    .related-section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    .related-section .section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    .related-section .section-content {
+        color: #495057;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .restrictive-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .restrictive-badge.yes {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    .restrictive-badge.no {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .empty-state i {
+        font-size: 3rem;
+        color: #adb5bd;
+        margin-bottom: 1rem;
+    }
+
+    .stats-mini {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 0.75rem;
+    }
+    .stats-mini .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .stats-mini .stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    .stats-mini .stat-label {
+        font-size: 0.8rem;
+        opacity: 0.85;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.85);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        backdrop-filter: blur(2px);
+    }
+    .loading-overlay.active {
+        display: flex;
+    }
+    .loading-content {
+        text-align: center;
+    }
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #e9ecef;
+        border-top-color: #1b7783;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    .loading-text {
+        margin-top: 1rem;
+        color: #495057;
+        font-weight: 500;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Fuente texto */
+    .source-text {
+        font-size: 0.85rem;
+        color: #0d6efd;
+        word-break: break-all;
+    }
+    .source-text:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Filtrando resultados...</div>
+    </div>
+</div>
+
+<!-- Resumen de la busqueda -->
+<div class="search-summary">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div class="search-meta mb-1">
+                <i class="bi bi-search"></i> Consulta realizada el {{ busqueda.fecha|date:"d/m/Y H:i" }}
+            </div>
+            <div class="search-term">
+                "{{ busqueda.termino_buscado }}"
+            </div>
+            <div class="stats-mini">
+                <div class="stat-item">
+                    <span class="stat-value">{{ busqueda.resultados.count }}</span>
+                    <span class="stat-label">resultado{{ busqueda.resultados.count|pluralize:"s" }}</span>
+                </div>
+                {% if busqueda.resultados.count > 0 %}
+                <div class="stat-item">
+                    <span class="stat-value" id="countRelevant">-</span>
+                    <span class="stat-label">con alta coincidencia</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'historial_busquedas' %}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            <a href="{% url 'generar_pdf_busqueda' busqueda_id=busqueda.id %}" class="btn btn-light btn-sm" target="_blank">
+                <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Descargar PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if busqueda.resultados.exists %}
+<!-- Panel de filtros mejorado -->
+<div class="filter-panel">
+    <div class="row align-items-center g-3">
+        <div class="col-auto">
+            <span class="filter-title">
+                <i class="bi bi-funnel-fill text-primary"></i> Filtrar resultados
+            </span>
+        </div>
+        <div class="col-auto">
+            <select id="filtroCoincidencia" class="form-select form-select-sm" style="min-width: 200px;">
+                <option value="0">Mostrar todos</option>
+                <option value="50">Coincidencia 50% o mayor</option>
+                <option value="70">Coincidencia 70% o mayor</option>
+                <option value="90">Coincidencia 90% o mayor</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select id="filtroClasificacion" class="form-select form-select-sm" style="min-width: 180px;">
+                <option value="todas">Todas las clasificaciones</option>
+                <option value="Rojo">Solo Rojo (Alto riesgo)</option>
+                <option value="Amarillo">Solo Amarillo (Medio)</option>
+                <option value="PEP's">Solo PEP's</option>
+            </select>
+        </div>
+        <div class="col">
+            <span class="text-muted" style="font-size: 0.9rem;">
+                Mostrando <strong id="contadorVisible">{{ busqueda.resultados.count }}</strong> de {{ busqueda.resultados.count }} resultados
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Resultados -->
+{% for resultado in busqueda.resultados.all %}
+<div class="result-card resultado-card
+    {% if resultado.clasificacion == 'Rojo' %}clasificacion-rojo{% endif %}
+    {% if resultado.clasificacion == 'Amarillo' %}clasificacion-amarillo{% endif %}
+    {% if resultado.clasificacion == 'PEP\'s' %}clasificacion-pep{% endif %}
+    {% if resultado.clasificacion == 'No Clasificado' %}clasificacion-default{% endif %}"
+    data-coincidencia="{% if resultado.coincidencia_id > resultado.coincidencia_nombre %}{{ resultado.coincidencia_id }}{% else %}{{ resultado.coincidencia_nombre }}{% endif %}"
+    data-clasificacion="{{ resultado.clasificacion }}">
+
+    <!-- Header del resultado -->
+    <div class="result-header">
+        <div>
+            <h5 class="person-name">
+                <i class="bi bi-person-fill"></i> {{ resultado.nombre_completo }}
+            </h5>
+            <span class="person-id">
+                <i class="bi bi-fingerprint"></i> {{ resultado.tipo_identificacion|default:"ID" }}: {{ resultado.identificacion }}
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {% if resultado.es_restrictiva %}
+            <span class="restrictive-badge yes">
+                <i class="bi bi-exclamation-octagon-fill"></i> Lista Restrictiva
+            </span>
+            {% else %}
+            <span class="restrictive-badge no">
+                <i class="bi bi-check-circle"></i> No Restrictiva
+            </span>
+            {% endif %}
+
+            <span class="clasificacion-badge
+                {% if resultado.clasificacion == 'Rojo' %}rojo{% endif %}
+                {% if resultado.clasificacion == 'Amarillo' %}amarillo{% endif %}
+                {% if resultado.clasificacion == 'PEP\'s' %}pep{% endif %}
+                {% if resultado.clasificacion == 'No Clasificado' %}default{% endif %}">
+                {% if resultado.clasificacion == 'Rojo' %}
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                {% elif resultado.clasificacion == 'Amarillo' %}
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                {% elif resultado.clasificacion == 'PEP\'s' %}
+                    <i class="bi bi-person-badge-fill"></i>
+                {% else %}
+                    <i class="bi bi-dash-circle"></i>
+                {% endif %}
+                {{ resultado.clasificacion }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Body del resultado -->
+    <div class="result-body">
+        <div class="row">
+            <!-- Columna de coincidencias -->
+            <div class="col-lg-4 col-md-5 mb-3 mb-md-0">
+                <div class="coincidence-panel">
+                    <div class="panel-title">
+                        <i class="bi bi-bullseye"></i> Nivel de Coincidencia
+                    </div>
+
+                    <!-- Coincidencia por ID -->
+                    <div class="coincidence-item">
+                        <div class="label">
+                            <span>Por Documento (ID)</span>
+                            <span class="percentage
+                                {% if resultado.coincidencia_id >= 70 %}text-success
+                                {% elif resultado.coincidencia_id >= 50 %}text-warning
+                                {% else %}text-secondary{% endif %}">
+                                {{ resultado.coincidencia_id }}%
+                            </span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar
+                                {% if resultado.coincidencia_id >= 70 %}high
+                                {% elif resultado.coincidencia_id >= 50 %}medium
+                                {% else %}low{% endif %}"
+                                style="width: {{ resultado.coincidencia_id }}%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coincidencia por Nombre -->
+                    <div class="coincidence-item">
+                        <div class="label">
+                            <span>Por Nombre</span>
+                            <span class="percentage
+                                {% if resultado.coincidencia_nombre >= 70 %}text-success
+                                {% elif resultado.coincidencia_nombre >= 50 %}text-warning
+                                {% else %}text-secondary{% endif %}">
+                                {{ resultado.coincidencia_nombre }}%
+                            </span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar
+                                {% if resultado.coincidencia_nombre >= 70 %}high
+                                {% elif resultado.coincidencia_nombre >= 50 %}medium
+                                {% else %}low{% endif %}"
+                                style="width: {{ resultado.coincidencia_nombre }}%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna de informacion -->
+            <div class="col-lg-8 col-md-7">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Tipo de Lista</div>
+                        <div class="info-value">{{ resultado.tipo_lista|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Origen</div>
+                        <div class="info-value">{{ resultado.origen_lista|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tipo de Persona</div>
+                        <div class="info-value">{{ resultado.tipo_persona|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Fuente</div>
+                        <div class="info-value">
+                            {% if resultado.fuente %}
+                                <a href="{{ resultado.fuente }}" target="_blank" class="source-text text-decoration-none">
+                                    {{ resultado.fuente }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if resultado.relacionado_con %}
+                <div class="related-section">
+                    <div class="section-title">
+                        <i class="bi bi-link-45deg"></i> Relacionado con / Descripcion
+                    </div>
+                    <div class="section-content">
+                        {{ resultado.relacionado_con|truncatewords:50 }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<!-- Estado vacio -->
+<div class="empty-state">
+    <i class="bi bi-check-circle"></i>
+    <h4 class="text-muted">Sin coincidencias</h4>
+    <p class="text-muted mb-0">Esta consulta no arrojo resultados en las listas restrictivas.</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filtroCoincidencia = document.getElementById('filtroCoincidencia');
+    const filtroClasificacion = document.getElementById('filtroClasificacion');
+    const contador = document.getElementById('contadorVisible');
+    const countRelevant = document.getElementById('countRelevant');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // Contar resultados con alta coincidencia al cargar
+    function contarAltaCoincidencia() {
+        let count = 0;
+        document.querySelectorAll('.resultado-card').forEach(card => {
+            const coincidencia = parseInt(card.dataset.coincidencia) || 0;
+            if (coincidencia >= 70) count++;
+        });
+        if (countRelevant) countRelevant.textContent = count;
+    }
+    contarAltaCoincidencia();
+
+    // Mostrar loading
+    function mostrarLoading() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('active');
+        }
+    }
+
+    // Ocultar loading
+    function ocultarLoading() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('active');
+        }
+    }
+
+    // Funcion de filtrado real
+    function ejecutarFiltrado() {
+        const umbralCoincidencia = parseInt(filtroCoincidencia?.value || 0);
+        const clasificacionSeleccionada = filtroClasificacion?.value || 'todas';
+        let visibles = 0;
+
+        document.querySelectorAll('.resultado-card').forEach(card => {
+            const coincidencia = parseInt(card.dataset.coincidencia) || 0;
+            const clasificacion = card.dataset.clasificacion;
+
+            const pasaCoincidencia = coincidencia >= umbralCoincidencia;
+            const pasaClasificacion = clasificacionSeleccionada === 'todas' || clasificacion === clasificacionSeleccionada;
+
+            if (pasaCoincidencia && pasaClasificacion) {
+                card.style.display = 'block';
+                visibles++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (contador) contador.textContent = visibles;
+        ocultarLoading();
+    }
+
+    // Funcion de filtrado con animacion
+    function filtrarResultados() {
+        mostrarLoading();
+        // Delay de 800ms para mostrar la animacion de carga
+        setTimeout(ejecutarFiltrado, 800);
+    }
+
+    // Event listeners
+    if (filtroCoincidencia) {
+        filtroCoincidencia.addEventListener('change', filtrarResultados);
+    }
+    if (filtroClasificacion) {
+        filtroClasificacion.addEventListener('change', filtrarResultados);
+    }
+});
+</script>
+{% endblock %}

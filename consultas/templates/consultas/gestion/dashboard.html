@@ -1,0 +1,215 @@
+{% extends 'consultas/base.html' %}
+{% load static %}
+
+{% block title %}Gestión | {{ empresa.nombre }}{% endblock %}
+
+{% block content %}
+<header class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="display-6">
+            <i class="bi bi-bar-chart-line"></i> Panel de Gestión
+        </h1>
+        <p class="text-muted mb-0">
+            Métricas y actividad de <strong>{{ empresa.nombre }}</strong> en los últimos 30 días.
+        </p>
+    </div>
+    <a href="{% url 'gestion_consultas' %}" class="btn btn-primary">
+        <i class="bi bi-list-ul"></i> Ver Todas las Consultas
+    </a>
+</header>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card h-100 shadow-sm border-start border-primary border-4">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-search"></i> Consultas (30 días)
+                </h6>
+                <p class="card-text display-4 fw-bold text-primary mb-0">{{ total_consultas_mes }}</p>
+                <small class="text-muted">{{ consultas_hoy }} hoy</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card h-100 shadow-sm border-start border-danger border-4">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-shield-fill-exclamation text-danger"></i> Hallazgos Rojos
+                </h6>
+                <p class="card-text display-4 fw-bold text-danger mb-0">{{ rojo_mes }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card h-100 shadow-sm border-start border-warning border-4">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i> Hallazgos Amarillos
+                </h6>
+                <p class="card-text display-4 fw-bold text-warning mb-0">{{ amarillo_mes }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card h-100 shadow-sm border-start border-info border-4">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-people-fill text-info"></i> Usuarios Activos
+                </h6>
+                <p class="card-text display-4 fw-bold text-info mb-0">{{ total_usuarios_empresa }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-bold">
+                <i class="bi bi-graph-up"></i> Tendencia de Consultas (30 días)
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px;">
+                    <canvas id="tendenciaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-bold">
+                <i class="bi bi-trophy"></i> Top Usuarios por Consultas
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for u in top_usuarios %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-person-circle text-muted"></i>
+                            {% if u.usuario__first_name %}
+                                {{ u.usuario__first_name }} {{ u.usuario__last_name }}
+                            {% else %}
+                                {{ u.usuario__username }}
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-primary rounded-pill">{{ u.total }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted text-center">Sin datos</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history"></i> Últimas Consultas de la Empresa</span>
+                <a href="{% url 'gestion_consultas' %}" class="btn btn-sm btn-outline-primary">
+                    Ver todas <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Término Buscado</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                                <th class="text-center">Hallazgos</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in ultimas_busquedas %}
+                            <tr>
+                                <td>
+                                    <strong>{{ b.termino_buscado|truncatechars:40 }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ b.usuario.username }}</span>
+                                </td>
+                                <td>{{ b.fecha_busqueda|date:"d/m/Y H:i" }}</td>
+                                <td class="text-center">
+                                    {% if b.encontro_resultados %}
+                                        {% with resultados=b.resultados.all %}
+                                            {% regroup resultados by clasificacion as resultados_agrupados %}
+                                            {% for grupo in resultados_agrupados %}
+                                                {% if grupo.grouper == 'Rojo' %}
+                                                    <span class="badge bg-danger">R: {{ grupo.list|length }}</span>
+                                                {% elif grupo.grouper == 'Amarillo' %}
+                                                    <span class="badge bg-warning text-dark">A: {{ grupo.list|length }}</span>
+                                                {% elif grupo.grouper == "PEP's" %}
+                                                    <span class="badge bg-info text-dark">P: {{ grupo.list|length }}</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">Sin hallazgos</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{% url 'gestion_detalle_busqueda' busqueda_id=b.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No hay consultas recientes.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ labels_tendencia|json_script:"labels-tendencia" }}
+{{ data_consultas|json_script:"data-consultas" }}
+
+<script>
+    const labelsTendencia = JSON.parse(document.getElementById('labels-tendencia').textContent);
+    const dataConsultas = JSON.parse(document.getElementById('data-consultas').textContent);
+
+    const ctx = document.getElementById('tendenciaChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labelsTendencia,
+            datasets: [{
+                label: 'Consultas',
+                data: dataConsultas,
+                backgroundColor: 'rgba(27, 119, 131, 0.7)',
+                borderColor: 'rgba(27, 119, 131, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

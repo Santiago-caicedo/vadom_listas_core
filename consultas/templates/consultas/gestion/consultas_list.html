@@ -1,0 +1,186 @@
+{% extends 'consultas/base.html' %}
+{% load static %}
+
+{% block title %}Consultas de la Empresa | {{ empresa.nombre }}{% endblock %}
+
+{% block content %}
+<header class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="display-6">
+            <i class="bi bi-list-ul"></i> Consultas de la Empresa
+        </h1>
+        <p class="text-muted mb-0">
+            Historial completo de consultas realizadas por <strong>{{ empresa.nombre }}</strong>.
+        </p>
+    </div>
+    <a href="{% url 'gestion_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver al Dashboard
+    </a>
+</header>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Buscar término</label>
+                <input type="text" name="q" class="form-control form-control-sm"
+                       placeholder="ID, nombre..." value="{{ request.GET.q|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Usuario</label>
+                <select name="usuario" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for u in usuarios_empresa %}
+                    <option value="{{ u.id }}" {% if request.GET.usuario == u.id|stringformat:"i" %}selected{% endif %}>
+                        {{ u.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Desde</label>
+                <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                       value="{{ request.GET.fecha_desde|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Hasta</label>
+                <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                       value="{{ request.GET.fecha_hasta|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Con resultados</label>
+                <select name="con_resultados" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="si" {% if request.GET.con_resultados == 'si' %}selected{% endif %}>Con hallazgos</option>
+                    <option value="no" {% if request.GET.con_resultados == 'no' %}selected{% endif %}>Sin hallazgos</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="{% url 'gestion_consultas' %}" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <span class="text-muted">
+            <i class="bi bi-info-circle"></i>
+            Mostrando <strong>{{ page_obj.paginator.count }}</strong> consultas
+            {% if request.GET.q or request.GET.usuario or request.GET.fecha_desde or request.GET.fecha_hasta or request.GET.con_resultados %}
+                (filtrado)
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Término Buscado</th>
+                        <th>Usuario</th>
+                        <th>Fecha y Hora</th>
+                        <th class="text-center">Hallazgos</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for busqueda in page_obj %}
+                    <tr>
+                        <td>
+                            <strong>{{ busqueda.termino_buscado|truncatechars:50 }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-person"></i> {{ busqueda.usuario.username }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ busqueda.fecha_busqueda|date:"d/m/Y" }}</span>
+                            <small class="d-block text-muted">{{ busqueda.fecha_busqueda|date:"H:i" }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if busqueda.encontro_resultados %}
+                                {% with resultados=busqueda.resultados.all %}
+                                    {% regroup resultados by clasificacion as resultados_agrupados %}
+                                    {% for grupo in resultados_agrupados %}
+                                        {% if grupo.grouper == 'Rojo' %}
+                                            <span class="badge bg-danger me-1">R: {{ grupo.list|length }}</span>
+                                        {% elif grupo.grouper == 'Amarillo' %}
+                                            <span class="badge bg-warning text-dark me-1">A: {{ grupo.list|length }}</span>
+                                        {% elif grupo.grouper == "PEP's" %}
+                                            <span class="badge bg-info text-dark me-1">P: {{ grupo.list|length }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="badge bg-light text-muted">Sin hallazgos</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'gestion_detalle_busqueda' busqueda_id=busqueda.id %}"
+                               class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                                <i class="bi bi-eye"></i> Ver
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox" style="font-size: 2.5rem;"></i>
+                            <p class="mb-0 mt-2">No se encontraron consultas.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="Paginación" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}{% if request.GET.con_resultados %}&con_resultados={{ request.GET.con_resultados }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-left"></i> Anterior</span>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}{% if request.GET.con_resultados %}&con_resultados={{ request.GET.con_resultados }}{% endif %}">
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Siguiente <i class="bi bi-chevron-right"></i></span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

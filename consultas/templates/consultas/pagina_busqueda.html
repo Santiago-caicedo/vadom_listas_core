@@ -1,0 +1,63 @@
+{% extends 'consultas/base.html' %}
+
+{% block title %}Panel de Búsqueda | Plataforma LAFT{% endblock %}
+
+{% block content %}
+    <header class="page-header">
+        <h1 class="display-6">Panel de Búsqueda</h1>
+        <p class="text-muted">Realiza consultas por identificación y/o nombre en listas restrictivas.</p>
+    </header>
+
+    {% if request.method == 'POST' and form.is_valid and busqueda_obj %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading"><i class="bi bi-check-circle-fill"></i> ¡Búsqueda Completada!</h4>
+        <p>La consulta para <strong>"{{ busqueda_obj.termino_buscado }}"</strong> se ha guardado en el historial.</p>
+        <hr>
+        <a href="{% url 'detalle_busqueda' busqueda_id=busqueda_obj.id %}" class="btn btn-success fw-bold">
+            <i class="bi bi-file-earmark-text-fill"></i> Ver Expediente Detallado
+        </a>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <div class="card mb-5">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-input-cursor-text"></i> Realizar Nueva Consulta</h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" id="search-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.identificacion.label_tag }}{{ form.identificacion }}</div>
+                    <div class="col-md-6 mb-3">{{ form.nombres.label_tag }}{{ form.nombres }}</div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-button"><i class="bi bi-send-fill"></i> Consultar</button>
+                <div class="spinner-border text-primary ms-2" role="status" id="loading-spinner" style="display: none;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </form>
+        </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const searchForm = document.getElementById('search-form');
+    const submitButton = document.getElementById('submit-button');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    searchForm.addEventListener('submit', function() {
+        loadingSpinner.style.display = 'inline-block';
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Consultando...';
+    });
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            loadingSpinner.style.display = 'none';
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-send-fill"></i> Consultar';
+        }
+    });
+</script>
+{% endblock %}

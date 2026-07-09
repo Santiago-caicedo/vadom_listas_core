@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud Recibida</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; background-color: #f4f4f4;">
+
+    <table width="100%" max-width="600px" style="margin: auto; border-collapse: collapse; border: 1px solid #ddd; background-color: #ffffff;">
+        <tr>
+            <td style="background-color: #1b7783; padding: 20px; text-align: center;">
+                <img src="{{ logo_url }}" alt="Logo VADOM" style="max-width: 180px;">
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 30px;">
+                <h1 style="color: #1b7783; text-align: center; margin-top: 0;">¡Hemos Recibido tu Solicitud!</h1>
+                
+                <p style="font-size: 16px; line-height: 1.6;">
+                    Hola <strong>{{ instance.usuario_solicitante.username }}</strong>,
+                </p>
+                <p style="font-size: 16px; line-height: 1.6;">
+                    Confirmamos la recepción de tu solicitud de consulta masiva (ID: {{ instance.id }}).
+                </p>
+                <p style="font-size: 16px; line-height: 1.6;">
+                    Nuestro equipo la procesará y te notificaremos por este mismo medio tan pronto como tu reporte esté listo.
+                </p>
+
+                <p style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                    <a href="{{ domain }}/cargas-masivas/" 
+                       style="background-color: #1b7783; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;">
+                        Ver Mis Solicitudes
+                    </a>
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="background-color: #333; color: #aaa; padding: 25px; text-align: center; font-size: 12px; line-height: 1.5;">
+                <p style="margin: 0 0 10px 0;">
+                    Este es un correo generado automáticamente por la plataforma laft de VADOM DATA CONSULTING S.A.S, por favor no responda este mensaje.
+                </p>
+                <p style="margin: 0;">&copy; {% now "Y" %} VADOM DATA CONSULTING S.A.S. Todos los derechos reservados.</p>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

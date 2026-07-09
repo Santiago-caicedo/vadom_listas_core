@@ -1,0 +1,64 @@
+{% extends 'consultas/base.html' %}
+
+{% block title %}Historial de Búsquedas | Plataforma LAFT{% endblock %}
+
+{% block content %}
+    <header class="page-header">
+        <h1 class="display-6">Historial de Búsquedas</h1>
+        <p class="text-muted">Aquí puedes ver un registro de todas las consultas que has realizado. Haz clic en un término de búsqueda para ver el detalle.</p>
+    </header>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Término Buscado</th>
+                            <th scope="col">Fecha y Hora</th>
+                            <th scope="col" class="text-center">Resultados Encontrados</th>
+                            <th scope="col" class="text-center">Generó Alerta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for busqueda in busquedas %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'detalle_busqueda' busqueda_id=busqueda.id %}" class="fw-bold text-decoration-none">
+                                        {{ busqueda.termino_buscado }}
+                                    </a>
+                                </td>
+                                <td>{{ busqueda.fecha_busqueda|date:"d/m/Y, h:i A" }}</td>
+                                <td class="text-center">
+                                    {% if busqueda.encontro_resultados %}
+                                        <span class="badge rounded-pill bg-success-subtle border border-success-subtle text-success-emphasis">Sí</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis">No</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if busqueda.genero_alerta %}
+                                        <span class="badge rounded-pill bg-danger-subtle border border-danger-subtle text-danger-emphasis">
+                                            <i class="bi bi-exclamation-triangle-fill"></i> Sí
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5">
+                                    <p class="h5 text-muted">Aún no has realizado ninguna búsqueda.</p>
+                                    <a href="{% url 'pagina_busqueda' %}" class="btn btn-primary mt-3">
+                                        <i class="bi bi-search"></i> Realizar mi primera búsqueda
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

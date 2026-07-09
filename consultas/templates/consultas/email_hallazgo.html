@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:Arial, Helvetica, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:30px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1b7783, #145a63); padding:24px 30px; text-align:center;">
+              <h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:600;">
+                Alerta LAFT - Hallazgo Detectado
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px;">
+
+              <p style="color:#333; font-size:15px; line-height:1.6; margin-top:0;">
+                Se ha detectado un hallazgo en una consulta de listas restrictivas que requiere tu revisión.
+              </p>
+
+              <!-- Info card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; border:1px solid #e9ecef; margin:20px 0;">
+                <tr>
+                  <td style="padding:20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0; color:#6c757d; font-size:13px; width:160px;">Consultado por:</td>
+                        <td style="padding:6px 0; color:#212529; font-size:14px; font-weight:600;">{{ nombre_usuario }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; color:#6c757d; font-size:13px;">Fecha:</td>
+                        <td style="padding:6px 0; color:#212529; font-size:14px;">{{ busqueda.fecha_busqueda|date:"d/m/Y H:i" }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; color:#6c757d; font-size:13px;">Término buscado:</td>
+                        <td style="padding:6px 0; color:#212529; font-size:14px; font-weight:600;">{{ busqueda.termino_buscado }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; color:#6c757d; font-size:13px;">Total coincidencias:</td>
+                        <td style="padding:6px 0; color:#212529; font-size:14px; font-weight:600;">{{ total_resultados }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Desglose -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+                <tr>
+                  {% if restrictivas %}
+                  <td align="center" style="padding:8px;">
+                    <table cellpadding="0" cellspacing="0" style="background-color:#dc3545; border-radius:6px; min-width:120px;">
+                      <tr>
+                        <td style="padding:12px 16px; text-align:center;">
+                          <div style="color:#fff; font-size:22px; font-weight:700;">{{ restrictivas }}</div>
+                          <div style="color:#f8d7da; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Restrictivas</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  {% endif %}
+                  {% if boletines %}
+                  <td align="center" style="padding:8px;">
+                    <table cellpadding="0" cellspacing="0" style="background-color:#ffc107; border-radius:6px; min-width:120px;">
+                      <tr>
+                        <td style="padding:12px 16px; text-align:center;">
+                          <div style="color:#212529; font-size:22px; font-weight:700;">{{ boletines }}</div>
+                          <div style="color:#664d03; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Boletines</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+
+              <!-- Clasificaciones -->
+              {% if clasificaciones %}
+              <p style="color:#6c757d; font-size:13px; margin-bottom:8px;">Clasificaciones encontradas:</p>
+              <table cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr>
+                  {% for clasif in clasificaciones %}
+                  <td style="padding-right:8px;">
+                    <span style="display:inline-block; padding:4px 12px; border-radius:12px; font-size:12px; font-weight:600;
+                      {% if clasif == 'Rojo' %}
+                        background-color:#f8d7da; color:#842029;
+                      {% elif clasif == 'Amarillo' %}
+                        background-color:#fff3cd; color:#664d03;
+                      {% else %}
+                        background-color:#cff4fc; color:#055160;
+                      {% endif %}
+                    ">{{ clasif }}</span>
+                  </td>
+                  {% endfor %}
+                </tr>
+              </table>
+              {% endif %}
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:25px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ link_expediente }}" style="display:inline-block; background-color:#1b7783; color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:6px; font-size:15px; font-weight:600;">
+                      Ver expediente completo
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Nota -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff3cd; border-left:4px solid #ffc107; border-radius:4px; margin:20px 0;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <p style="color:#664d03; font-size:13px; margin:0; line-height:1.5;">
+                      <strong>Importante:</strong> Revisa las coincidencias para verificar la exactitud de los resultados encontrados. Las coincidencias parciales pueden no corresponder a la persona consultada.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f9fa; padding:20px 30px; border-top:1px solid #e9ecef; text-align:center;">
+              <p style="color:#6c757d; font-size:12px; margin:0;">
+                Sistema de Consultas LAFT &mdash; {{ empresa.nombre }}
+              </p>
+              <p style="color:#adb5bd; font-size:11px; margin:6px 0 0;">
+                Este es un mensaje automático. No responda a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

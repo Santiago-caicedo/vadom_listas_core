@@ -1,0 +1,45 @@
+{% extends 'consultas/base.html' %}
+{% block title %}Carga Masiva{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <h1 class="display-6">Consultas Masivas</h1>
+    <p class="text-muted">Sube un archivo Excel para procesar múltiples consultas.</p>
+</header>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title"><span class="badge bg-secondary rounded-pill me-2">Paso 1</span> Descargar Plantilla</h5>
+                <p class="card-text">Descarga el formato oficial de Excel. Llena las columnas con la información de las personas a consultar.</p>
+                <a href="{% url 'descargar_plantilla' %}" class="btn btn-secondary mt-auto">
+                    <i class="bi bi-file-earmark-excel-fill"></i> Descargar Plantilla.xlsx
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title"><span class="badge bg-secondary rounded-pill me-2">Paso 2</span> Subir Archivo Lleno</h5>
+                <p class="card-text">Sube el archivo que llenaste. Un administrador procesará tu solicitud y serás notificado por correo cuando tu reporte esté listo.</p>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ form.archivo_subido.label_tag }}
+                        {{ form.archivo_subido }}
+                        {% if form.archivo_subido.errors %}
+                            <div class="invalid-feedback d-block">{{ form.archivo_subido.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Subir Archivo y Notificar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
