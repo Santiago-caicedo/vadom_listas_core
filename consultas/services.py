@@ -11,7 +11,16 @@ def _realizar_peticion(url):
 
         # Si la petición fue exitosa (código 200 OK)
         if response.status_code == 200:
-            data = response.json()
+            # Si responde 200 pero el cuerpo no es JSON (mantenimiento, proxy, HTML) -> falla
+            try:
+                data = response.json()
+            except ValueError:
+                print("El API respondió 200 pero no es JSON válido")
+                return None
+            # El API puede responder 200 con un error de aplicación en 'MensajeError' -> falla
+            if data.get('MensajeError'):
+                print(f"Error del API (MensajeError): {data['MensajeError']}")
+                return None
             # El manual indica que los datos vienen en la llave "Resultados"
             return data.get('Resultados', [])
         else:
