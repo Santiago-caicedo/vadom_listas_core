@@ -52,6 +52,7 @@ def pagina_busqueda(request):
     resultados_api = None
     alerta_generada = False
     busqueda_obj = None # Initialize outside the POST block
+    servicio_no_disponible = False  # True si el webservice de listas no respondió
 
     if request.method == 'POST':
         form = BusquedaForm(request.POST)
@@ -74,11 +75,15 @@ def pagina_busqueda(request):
 
             # --- Save to Database ---
             if termino_buscado:
-                busqueda_obj = Busqueda.objects.create( # Assign to the outer scope variable
-                    usuario=request.user,
-                    termino_buscado=termino_buscado
-                )
-                if resultados_api is not None:
+                if resultados_api is None:
+                    # El webservice de listas NO respondió (caído / timeout / error).
+                    # NO se guarda la consulta, para NO mostrar un falso "sin hallazgos".
+                    servicio_no_disponible = True
+                else:
+                    busqueda_obj = Busqueda.objects.create(
+                        usuario=request.user,
+                        termino_buscado=termino_buscado,
+                    )
                     busqueda_obj.encontro_resultados = bool(resultados_api)
                     for item in resultados_api:
                         es_restrictiva = item.get('Restrictiva', False)
@@ -137,6 +142,7 @@ def pagina_busqueda(request):
         # 'resultados': resultados_api, # We don't show results directly anymore
         'alerta_generada': alerta_generada, # Keep for potential general alert messages
         'busqueda_obj': busqueda_obj, # Pass the created search object for the banner link
+        'servicio_no_disponible': servicio_no_disponible,
     }
 
     return render(request, 'consultas/pagina_busqueda.html', context)

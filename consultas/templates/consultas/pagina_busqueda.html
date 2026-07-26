@@ -8,6 +8,16 @@
         <p class="text-muted">Realiza consultas por identificación y/o nombre en listas restrictivas.</p>
     </header>
 
+    {% if servicio_no_disponible %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Servicio no disponible</h4>
+        <p class="mb-0">El servicio de consulta de listas no está disponible en este momento.
+        Por favor <strong>intente de nuevo en unos minutos</strong>. Esta consulta
+        <strong>NO se registró</strong> para no dejar un resultado incompleto o engañoso.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
     {% if request.method == 'POST' and form.is_valid and busqueda_obj %}
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <h4 class="alert-heading"><i class="bi bi-check-circle-fill"></i> ¡Búsqueda Completada!</h4>
