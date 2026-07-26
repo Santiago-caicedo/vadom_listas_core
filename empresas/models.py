@@ -9,8 +9,6 @@ class Empresa(models.Model):
     limite_consultas_mensual = models.PositiveIntegerField(default=0)
     # Bloqueo manual: si True, no deja hacer consultas (lo activa el superusuario).
     bloqueado = models.BooleanField(default=False)
-    # 'YYYY-MM' del último mes en que ya se envió el aviso de exceso (evita spam).
-    mes_alerta_cupo = models.CharField(max_length=7, blank=True, default='')
 
     # Esto le dice a django-tenants que cree un nuevo esquema 
     # automáticamente cuando se crea una nueva Empresa

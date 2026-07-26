@@ -144,14 +144,9 @@ def pagina_busqueda(request):
                         consumo_mes = empresa.consultas_mes_actual()
                         if consumo_mes > empresa.limite_consultas_mensual:
                             cupo_excedido = True
-                            mes_actual = timezone.now().strftime('%Y-%m')
-                            # Enviar el aviso por email una sola vez por mes
-                            if empresa.mes_alerta_cupo != mes_actual:
-                                # Solo se marca como avisado si el email SÍ se envió,
-                                # para que un fallo de SMTP reintente en la próxima consulta.
-                                if notificar_exceso_cupo(empresa, consumo_mes):
-                                    empresa.mes_alerta_cupo = mes_actual
-                                    empresa.save(update_fields=['mes_alerta_cupo'])
+                            # Avisar por email en CADA consulta que exceda el cupo,
+                            # hasta que el admin suba el límite de este mes.
+                            notificar_exceso_cupo(empresa, consumo_mes)
         else:
             # If form is invalid, print errors
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

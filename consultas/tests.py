@@ -168,3 +168,14 @@ class CupoYBloqueoTests(TestCase):
         for _ in range(3):
             self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
         mock_avisar.assert_not_called()
+
+    @patch('consultas.views.notificar_exceso_cupo')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_avisa_en_cada_consulta_excedida(self, _mock_api, mock_avisar):
+        # Debe avisar en CADA consulta que exceda (no solo una vez al mes).
+        self.empresa.limite_consultas_mensual = 1
+        self.empresa.save()
+        Busqueda.objects.create(usuario=self.user, termino_buscado='previa')  # base = 1 (en el límite)
+        self.client.post(self.url, {'nombres': 'A'})   # consumo 2 -> excede -> aviso 1
+        self.client.post(self.url, {'nombres': 'B'})   # consumo 3 -> excede -> aviso 2
+        self.assertEqual(mock_avisar.call_count, 2)
