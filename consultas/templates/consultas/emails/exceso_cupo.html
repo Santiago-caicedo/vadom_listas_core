@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cupo de consultas excedido</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:Arial, Helvetica, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:30px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header con logo -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1b7783, #145a63); padding:26px 30px; text-align:center;">
+              {% if logo_url %}
+              <img src="{{ logo_url }}" alt="VADOM" style="max-width:170px; height:auto; margin-bottom:10px;">
+              {% endif %}
+              <h1 style="color:#ffffff; margin:0; font-size:21px; font-weight:600;">
+                Cupo de consultas excedido
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px;">
+              <p style="color:#333; font-size:15px; line-height:1.6; margin-top:0;">
+                La empresa <strong>{{ empresa.nombre }}</strong> ha superado el número de
+                consultas contratado para este mes.
+              </p>
+
+              <!-- Tarjeta con los datos -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:8px; border:1px solid #e9ecef; margin:22px 0;">
+                <tr>
+                  <td style="padding:20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:7px 0; color:#6c757d; font-size:13px; width:180px;">Empresa:</td>
+                        <td style="padding:7px 0; color:#212529; font-size:14px; font-weight:600;">{{ empresa.nombre }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:7px 0; color:#6c757d; font-size:13px;">Cupo contratado:</td>
+                        <td style="padding:7px 0; color:#212529; font-size:14px; font-weight:600;">{{ empresa.limite_consultas_mensual }} / mes</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:7px 0; color:#6c757d; font-size:13px;">Consultas este mes:</td>
+                        <td style="padding:7px 0; color:#b02a37; font-size:16px; font-weight:700;">{{ consultas_hechas }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color:#555; font-size:13.5px; line-height:1.6;">
+                Las consultas se siguen realizando con normalidad. Si deseas ampliar el cupo
+                de este mes o bloquear temporalmente a la empresa, hazlo desde el panel de administración.
+              </p>
+
+              <!-- Botón -->
+              {% if link_plataforma %}
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 6px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ link_plataforma }}"
+                       style="background:#1b7783; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600;
+                              padding:13px 30px; border-radius:8px; display:inline-block;">
+                      Ir al panel de administración
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f9fa; padding:18px 30px; text-align:center; border-top:1px solid #e9ecef;">
+              <p style="color:#9aa0a6; font-size:12px; margin:0; line-height:1.5;">
+                VADOM Consulting · Plataforma de Consultas LAFT<br>
+                Este es un mensaje automático, por favor no respondas a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

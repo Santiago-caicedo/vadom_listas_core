@@ -100,15 +100,19 @@ def notificar_exceso_cupo(empresa, consultas_hechas):
         destino = getattr(settings, 'EMAIL_ALERTA_CUPO', '') or getattr(settings, 'ADMIN_EMAIL', '')
         if not destino:
             return False
-        from django.core.mail import send_mail
-        asunto = f"[Cupo excedido] {empresa.nombre} superó su cupo de consultas"
-        cuerpo = (
-            f"La empresa '{empresa.nombre}' superó su cupo mensual de consultas.\n\n"
-            f"Cupo contratado: {empresa.limite_consultas_mensual}\n"
-            f"Consultas realizadas este mes: {consultas_hechas}\n"
-            f"Sistema: {getattr(settings, 'MI_DOMINIO', '')}\n"
-        )
-        send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [destino], fail_silently=False)
+        dominio = (getattr(settings, 'MI_DOMINIO', '') or '').rstrip('/')
+        context = {
+            'empresa': empresa,
+            'consultas_hechas': consultas_hechas,
+            'logo_url': f"{getattr(settings, 'STATIC_URL', '')}images/logo_vadom.png",
+            'link_plataforma': f"{dominio}/core-admin/empresas/" if dominio else '',
+        }
+        asunto = f"Alerta: cupo de consultas excedido - {empresa.nombre}"
+        html = render_to_string('consultas/emails/exceso_cupo.html', context)
+        texto = strip_tags(html)
+        msg = EmailMultiAlternatives(asunto, texto, settings.DEFAULT_FROM_EMAIL, [destino])
+        msg.attach_alternative(html, "text/html")
+        msg.send(fail_silently=False)
         logger.info("Aviso de exceso de cupo enviado a %s (empresa %s, %s consultas)",
                     destino, empresa.nombre, consultas_hechas)
         return True
