@@ -147,9 +147,11 @@ def pagina_busqueda(request):
                             mes_actual = timezone.now().strftime('%Y-%m')
                             # Enviar el aviso por email una sola vez por mes
                             if empresa.mes_alerta_cupo != mes_actual:
-                                notificar_exceso_cupo(empresa, consumo_mes)
-                                empresa.mes_alerta_cupo = mes_actual
-                                empresa.save(update_fields=['mes_alerta_cupo'])
+                                # Solo se marca como avisado si el email SÍ se envió,
+                                # para que un fallo de SMTP reintente en la próxima consulta.
+                                if notificar_exceso_cupo(empresa, consumo_mes):
+                                    empresa.mes_alerta_cupo = mes_actual
+                                    empresa.save(update_fields=['mes_alerta_cupo'])
         else:
             # If form is invalid, print errors
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

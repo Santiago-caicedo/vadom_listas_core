@@ -96,10 +96,10 @@ def notificar_exceso_cupo(empresa, consultas_hechas):
     """
     try:
         if not getattr(settings, 'NOTIFICAR_EXCESO_CUPO', True):
-            return
+            return False
         destino = getattr(settings, 'EMAIL_ALERTA_CUPO', '') or getattr(settings, 'ADMIN_EMAIL', '')
         if not destino:
-            return
+            return False
         from django.core.mail import send_mail
         asunto = f"[Cupo excedido] {empresa.nombre} superó su cupo de consultas"
         cuerpo = (
@@ -111,6 +111,8 @@ def notificar_exceso_cupo(empresa, consultas_hechas):
         send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [destino], fail_silently=False)
         logger.info("Aviso de exceso de cupo enviado a %s (empresa %s, %s consultas)",
                     destino, empresa.nombre, consultas_hechas)
+        return True
     except Exception:
         logger.exception("Error enviando aviso de exceso de cupo (empresa %s)",
                          getattr(empresa, 'nombre', '?'))
+        return False
