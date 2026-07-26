@@ -11,7 +11,7 @@ from usuarios.models import Usuario
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 import json
-from .forms import ProcesarLoteForm, UsuarioCreateForm, UsuarioEditForm
+from .forms import ProcesarLoteForm, UsuarioCreateForm, UsuarioEditForm, EmpresaLimiteForm
 from django.urls import reverse_lazy
 from django.contrib import messages
 
@@ -263,4 +263,37 @@ class UsuarioDeleteView(SuperuserRequiredMixin, DeleteView):
 
     def form_valid(self, form):
         messages.success(self.request, f'Usuario "{self.object.username}" eliminado exitosamente.')
+        return super().form_valid(form)
+
+
+class EmpresaListView(SuperuserRequiredMixin, ListView):
+    """Lista las empresas con su cupo y su consumo del mes."""
+    model = Empresa
+    template_name = 'core_admin/empresa_list.html'
+    context_object_name = 'empresas'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = 'Cupos por Empresa'
+        for e in context['empresas']:
+            e.consumo_mes = e.consultas_mes_actual()  # atributo para el template
+        return context
+
+
+class EmpresaUpdateView(SuperuserRequiredMixin, UpdateView):
+    """Editar el cupo mensual y el bloqueo de una empresa."""
+    model = Empresa
+    form_class = EmpresaLimiteForm
+    template_name = 'core_admin/empresa_form.html'
+    success_url = reverse_lazy('core_admin:empresa_list')
+    context_object_name = 'empresa'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = f'Cupo: {self.object.nombre}'
+        context['consumo_mes'] = self.object.consultas_mes_actual()
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Empresa "{form.instance.nombre}" actualizada.')
         return super().form_valid(form)

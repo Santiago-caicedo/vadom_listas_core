@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 
 from consultas import services
 from consultas.models import Busqueda
+from empresas.models import Empresa
 
 User = get_user_model()
 
@@ -116,3 +117,54 @@ class PaginaBusquedaFalloTests(TestCase):
         resp = self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
         self.assertNotEqual(resp.status_code, 200)       # redirige al login
         self.assertEqual(Busqueda.objects.count(), 0)
+
+
+class CupoYBloqueoTests(TestCase):
+    """Cupo mensual por empresa: bloqueo manual corta; exceder solo avisa."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(nombre='ACME')
+        self.user = User.objects.create_user(username='u1', password='clave-larga-123')
+        self.user.empresa = self.empresa
+        self.user.save()
+        self.client.force_login(self.user)
+        self.url = reverse('pagina_busqueda')
+
+    @patch('consultas.views.consultar_api_por_nombre')
+    def test_empresa_bloqueada_no_consulta_ni_guarda(self, mock_api):
+        self.empresa.bloqueado = True
+        self.empresa.save()
+        resp = self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        self.assertTrue(resp.context['consultas_bloqueadas'])
+        self.assertEqual(Busqueda.objects.count(), 0)
+        mock_api.assert_not_called()   # ni siquiera consulta el API externo
+
+    @patch('consultas.views.notificar_exceso_cupo')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_cupo_excedido_avisa_pero_no_bloquea(self, _mock_api, mock_avisar):
+        self.empresa.limite_consultas_mensual = 1
+        self.empresa.save()
+        # Ya hay 1 búsqueda este mes -> la nueva es la 2da y excede el cupo de 1.
+        Busqueda.objects.create(usuario=self.user, termino_buscado='previa')
+        resp = self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        self.assertTrue(resp.context['cupo_excedido'])
+        self.assertEqual(Busqueda.objects.count(), 2)   # sí se guardó (solo avisa)
+        mock_avisar.assert_called_once()                 # se envió el aviso por email
+
+    @patch('consultas.views.notificar_exceso_cupo')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_dentro_del_cupo_no_avisa(self, _mock_api, mock_avisar):
+        self.empresa.limite_consultas_mensual = 5
+        self.empresa.save()
+        resp = self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        self.assertFalse(resp.context['cupo_excedido'])
+        mock_avisar.assert_not_called()
+
+    @patch('consultas.views.notificar_exceso_cupo')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_cupo_cero_es_ilimitado(self, _mock_api, mock_avisar):
+        self.empresa.limite_consultas_mensual = 0   # 0 = ilimitado
+        self.empresa.save()
+        for _ in range(3):
+            self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        mock_avisar.assert_not_called()

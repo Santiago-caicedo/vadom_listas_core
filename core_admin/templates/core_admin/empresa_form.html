@@ -1,0 +1,56 @@
+{% extends "core_admin/base_admin.html" %}
+
+{% block title %}{{ titulo }} | Panel de Admin{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'core_admin:empresa_list' %}" class="text-decoration-none">
+        <i class="bi bi-arrow-left"></i> Volver a cupos
+    </a>
+    <h2 class="mt-2"><i class="bi bi-building-fill-gear"></i> {{ titulo }}</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body text-center">
+                <div class="text-muted small text-uppercase">Consultas este mes</div>
+                <div class="display-6 fw-bold">{{ consumo_mes }}</div>
+                {% if empresa.limite_consultas_mensual > 0 %}
+                    <div class="text-muted small">de {{ empresa.limite_consultas_mensual }} contratadas</div>
+                {% else %}
+                    <div class="text-muted small">cupo ilimitado</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.limite_consultas_mensual.id_for_label }}">
+                            {{ form.limite_consultas_mensual.label }}
+                        </label>
+                        {{ form.limite_consultas_mensual }}
+                        <div class="form-text">Escribe 0 para dejarlo sin límite.</div>
+                        {{ form.limite_consultas_mensual.errors }}
+                    </div>
+                    <div class="mb-4 form-check">
+                        {{ form.bloqueado }}
+                        <label class="form-check-label" for="{{ form.bloqueado.id_for_label }}">
+                            {{ form.bloqueado.label }}
+                        </label>
+                        <div class="form-text">Si se activa, esta empresa NO podrá hacer consultas hasta desbloquearla.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Guardar cambios
+                    </button>
+                    <a href="{% url 'core_admin:empresa_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

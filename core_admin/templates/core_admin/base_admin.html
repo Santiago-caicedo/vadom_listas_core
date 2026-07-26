@@ -75,6 +75,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {% if 'empresas' in request.path %}active{% endif %}" href="{% url 'core_admin:empresa_list' %}">
+                        <i class="bi bi-building-fill-gear"></i> Cupos por Empresa
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {% if 'cargas-masivas' in request.path %}active{% endif %}" href="{% url 'core_admin:lote_list' %}">
                         <i class="bi bi-files"></i> Gestionar Lotes
                     </a>

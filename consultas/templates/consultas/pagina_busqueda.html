@@ -8,6 +8,24 @@
         <p class="text-muted">Realiza consultas por identificación y/o nombre en listas restrictivas.</p>
     </header>
 
+    {% if consultas_bloqueadas %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading"><i class="bi bi-lock-fill"></i> Consultas bloqueadas</h4>
+        <p class="mb-0">Las consultas de su empresa están <strong>bloqueadas</strong>.
+        Por favor contacte al administrador.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if cupo_excedido %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Cupo de consultas excedido</h4>
+        <p class="mb-0">Ha <strong>excedido el número de consultas contratado</strong> para este mes.
+        La consulta se realizó, pero le recomendamos contactar al administrador.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
     {% if servicio_no_disponible %}
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
         <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Servicio no disponible</h4>

@@ -129,3 +129,18 @@ class ProcesarLoteForm(forms.ModelForm):
             'estado': forms.Select(attrs={'class': 'form-select'}),
             'archivo_resultado': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+
+class EmpresaLimiteForm(forms.ModelForm):
+    """Editar el cupo mensual de consultas y el bloqueo manual de una empresa."""
+    class Meta:
+        model = Empresa
+        fields = ['limite_consultas_mensual', 'bloqueado']
+        widgets = {
+            'limite_consultas_mensual': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'bloqueado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'limite_consultas_mensual': 'Cupo mensual de consultas (0 = ilimitado)',
+            'bloqueado': 'Bloquear las consultas de esta empresa',
+        }

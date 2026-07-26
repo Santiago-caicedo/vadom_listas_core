@@ -87,3 +87,30 @@ def notificar_superiores_hallazgo(busqueda):
             "Error al enviar notificación de hallazgo (búsqueda #%s)",
             getattr(busqueda, 'id', '?'),
         )
+
+
+def notificar_exceso_cupo(empresa, consultas_hechas):
+    """
+    Avisa por email (al correo configurado en .env) que una empresa superó su
+    cupo mensual. Best-effort: nunca interrumpe la búsqueda.
+    """
+    try:
+        if not getattr(settings, 'NOTIFICAR_EXCESO_CUPO', True):
+            return
+        destino = getattr(settings, 'EMAIL_ALERTA_CUPO', '') or getattr(settings, 'ADMIN_EMAIL', '')
+        if not destino:
+            return
+        from django.core.mail import send_mail
+        asunto = f"[Cupo excedido] {empresa.nombre} superó su cupo de consultas"
+        cuerpo = (
+            f"La empresa '{empresa.nombre}' superó su cupo mensual de consultas.\n\n"
+            f"Cupo contratado: {empresa.limite_consultas_mensual}\n"
+            f"Consultas realizadas este mes: {consultas_hechas}\n"
+            f"Sistema: {getattr(settings, 'MI_DOMINIO', '')}\n"
+        )
+        send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [destino], fail_silently=False)
+        logger.info("Aviso de exceso de cupo enviado a %s (empresa %s, %s consultas)",
+                    destino, empresa.nombre, consultas_hechas)
+    except Exception:
+        logger.exception("Error enviando aviso de exceso de cupo (empresa %s)",
+                         getattr(empresa, 'nombre', '?'))

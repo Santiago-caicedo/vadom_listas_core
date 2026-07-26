@@ -1,0 +1,66 @@
+{% extends "core_admin/base_admin.html" %}
+
+{% block title %}Cupos por Empresa | Panel de Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="bi bi-building-fill-gear"></i> Cupos por Empresa</h2>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th class="text-center">Cupo mensual</th>
+                        <th class="text-center">Consultas este mes</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empresa in empresas %}
+                    <tr>
+                        <td><strong>{{ empresa.nombre }}</strong></td>
+                        <td class="text-center">
+                            {% if empresa.limite_consultas_mensual > 0 %}
+                                {{ empresa.limite_consultas_mensual }}
+                            {% else %}
+                                <span class="text-muted">Ilimitado</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if empresa.limite_consultas_mensual > 0 and empresa.consumo_mes > empresa.limite_consultas_mensual %}
+                                <span class="badge bg-warning text-dark">{{ empresa.consumo_mes }} · excedido</span>
+                            {% else %}
+                                {{ empresa.consumo_mes }}
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if empresa.bloqueado %}
+                                <span class="badge bg-danger"><i class="bi bi-lock-fill"></i> Bloqueada</span>
+                            {% else %}
+                                <span class="badge bg-success">Activa</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'core_admin:empresa_edit' empresa.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil-square"></i> Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No hay empresas registradas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small mb-0">
+            El consumo se cuenta por mes calendario. Al superar el cupo, la consulta igual se realiza
+            (solo se avisa) y se envía un correo al administrador. El bloqueo manual sí corta las consultas.
+        </p>
+    </div>
+</div>
+{% endblock %}

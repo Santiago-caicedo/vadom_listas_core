@@ -198,6 +198,11 @@ MI_DOMINIO = config('MI_DOMINIO', default='http://127.0.0.1:8000')
 # encuentra hallazgos. Configurable por cliente desde el .env.
 NOTIFICAR_HALLAZGOS = config('NOTIFICAR_HALLAZGOS', default=True, cast=bool)
 
+# Aviso por email cuando una empresa supera su cupo mensual de consultas.
+NOTIFICAR_EXCESO_CUPO = config('NOTIFICAR_EXCESO_CUPO', default=True, cast=bool)
+# Correo que recibe esos avisos (por defecto, el ADMIN_EMAIL).
+EMAIL_ALERTA_CUPO = config('EMAIL_ALERTA_CUPO', default=ADMIN_EMAIL)
+
 
 # ===========================================
 # CONFIGURACIÓN HÍBRIDA DE ARCHIVOS ESTÁTICOS Y MEDIA

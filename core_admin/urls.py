@@ -14,6 +14,10 @@ urlpatterns = [
     # Reportes
     path('reporte-mensual/', views.ReporteMensualView.as_view(), name='reporte_mensual'),
 
+    # Cupos por empresa
+    path('empresas/', views.EmpresaListView.as_view(), name='empresa_list'),
+    path('empresas/editar/<int:pk>/', views.EmpresaUpdateView.as_view(), name='empresa_edit'),
+
     # Gestión de Usuarios
     path('usuarios/', views.UsuarioListView.as_view(), name='usuario_list'),
     path('usuarios/crear/', views.UsuarioCreateView.as_view(), name='usuario_create'),

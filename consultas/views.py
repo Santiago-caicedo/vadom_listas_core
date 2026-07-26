@@ -7,7 +7,7 @@ from django.conf import settings
 from .forms import BusquedaForm
 from .services import consultar_api_por_id, consultar_api_por_id_y_nombre, consultar_api_por_nombre
 from .models import Busqueda, Resultado # <-- IMPORTAMOS LOS MODELOS
-from .notifications import notificar_superiores_hallazgo
+from .notifications import notificar_superiores_hallazgo, notificar_exceso_cupo
 from django.utils import timezone
 from weasyprint import HTML
 from django.template.loader import render_to_string
@@ -53,6 +53,8 @@ def pagina_busqueda(request):
     alerta_generada = False
     busqueda_obj = None # Initialize outside the POST block
     servicio_no_disponible = False  # True si el webservice de listas no respondió
+    consultas_bloqueadas = False     # True si la empresa está bloqueada manualmente
+    cupo_excedido = False            # True si la empresa superó su cupo mensual
 
     if request.method == 'POST':
         form = BusquedaForm(request.POST)
@@ -62,16 +64,23 @@ def pagina_busqueda(request):
             nombres = form.cleaned_data.get("nombres")
             termino_buscado = ""
 
-            # --- Decide API method ---
-            if identificacion and nombres:
-                termino_buscado = f"ID: {identificacion} y Nombre: {nombres}"
-                resultados_api = consultar_api_por_id_y_nombre(identificacion, nombres)
-            elif identificacion:
-                termino_buscado = f"ID: {identificacion}"
-                resultados_api = consultar_api_por_id(identificacion)
-            elif nombres:
-                termino_buscado = f"Nombre: {nombres}"
-                resultados_api = consultar_api_por_nombre(nombres)
+            # --- Bloqueo manual por empresa (lo activa el superusuario en core_admin) ---
+            empresa = getattr(request.user, 'empresa', None)
+            bloqueada = bool(empresa and empresa.bloqueado)
+            if bloqueada:
+                consultas_bloqueadas = True
+
+            # --- Decide API method (solo si la empresa NO está bloqueada) ---
+            if not bloqueada:
+                if identificacion and nombres:
+                    termino_buscado = f"ID: {identificacion} y Nombre: {nombres}"
+                    resultados_api = consultar_api_por_id_y_nombre(identificacion, nombres)
+                elif identificacion:
+                    termino_buscado = f"ID: {identificacion}"
+                    resultados_api = consultar_api_por_id(identificacion)
+                elif nombres:
+                    termino_buscado = f"Nombre: {nombres}"
+                    resultados_api = consultar_api_por_nombre(nombres)
 
             # --- Save to Database ---
             if termino_buscado:
@@ -129,6 +138,18 @@ def pagina_busqueda(request):
                     # (configurable por cliente con NOTIFICAR_HALLAZGOS en el .env)
                     if settings.NOTIFICAR_HALLAZGOS and busqueda_obj.encontro_resultados:
                         notificar_superiores_hallazgo(busqueda_obj)
+
+                    # --- Cupo mensual de la empresa (solo avisa; no bloquea) ---
+                    if empresa and empresa.limite_consultas_mensual > 0:
+                        consumo_mes = empresa.consultas_mes_actual()
+                        if consumo_mes > empresa.limite_consultas_mensual:
+                            cupo_excedido = True
+                            mes_actual = timezone.now().strftime('%Y-%m')
+                            # Enviar el aviso por email una sola vez por mes
+                            if empresa.mes_alerta_cupo != mes_actual:
+                                notificar_exceso_cupo(empresa, consumo_mes)
+                                empresa.mes_alerta_cupo = mes_actual
+                                empresa.save(update_fields=['mes_alerta_cupo'])
         else:
             # If form is invalid, print errors
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -142,6 +163,8 @@ def pagina_busqueda(request):
         # 'resultados': resultados_api, # We don't show results directly anymore
         'alerta_generada': alerta_generada, # Keep for potential general alert messages
         'busqueda_obj': busqueda_obj, # Pass the created search object for the banner link
+        'consultas_bloqueadas': consultas_bloqueadas,
+        'cupo_excedido': cupo_excedido,
         'servicio_no_disponible': servicio_no_disponible,
     }
 
