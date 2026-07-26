@@ -8,6 +8,7 @@ from .forms import BusquedaForm
 from .services import consultar_api_por_id, consultar_api_por_id_y_nombre, consultar_api_por_nombre
 from .models import Busqueda, Resultado # <-- IMPORTAMOS LOS MODELOS
 from .notifications import notificar_superiores_hallazgo, notificar_exceso_cupo
+from .utils import periodo_cupo
 from django.utils import timezone
 from weasyprint import HTML
 from django.template.loader import render_to_string
@@ -154,9 +155,21 @@ def pagina_busqueda(request):
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print("Errores encontrados:", form.errors)
 
+    # --- Info de cupo para mostrar en el panel (GET y POST) ---
+    empresa_actual = getattr(request.user, 'empresa', None)
+    cupo_consumo = empresa_actual.consultas_mes_actual() if empresa_actual else 0
+    cupo_limite = empresa_actual.limite_consultas_mensual if empresa_actual else 0
+    periodo = periodo_cupo()
+    cupo_pct = min(100, int(cupo_consumo * 100 / cupo_limite)) if cupo_limite > 0 else 0
+
     # Prepare context for the template
     context = {
         'form': form,
+        'empresa_actual': empresa_actual,
+        'cupo_consumo': cupo_consumo,
+        'cupo_limite': cupo_limite,
+        'periodo': periodo,
+        'cupo_pct': cupo_pct,
         # 'resultados': resultados_api, # We don't show results directly anymore
         'alerta_generada': alerta_generada, # Keep for potential general alert messages
         'busqueda_obj': busqueda_obj, # Pass the created search object for the banner link

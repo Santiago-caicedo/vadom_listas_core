@@ -5,6 +5,7 @@ from datetime import datetime
 from django.db.models.functions import TruncDay
 from django.db.models import Q
 from consultas.models import Busqueda
+from consultas.utils import periodo_cupo
 from cargas_masivas.models import LoteConsultaMasiva
 from empresas.models import Empresa
 from usuarios.models import Usuario
@@ -275,6 +276,7 @@ class EmpresaListView(SuperuserRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo'] = 'Cupos por Empresa'
+        context['periodo'] = periodo_cupo()
         for e in context['empresas']:
             e.consumo_mes = e.consultas_mes_actual()  # atributo para el template
         return context
