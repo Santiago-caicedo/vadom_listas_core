@@ -7,5 +7,5 @@ esquivensa	/opt/listas_esquivensa	esquivensa.vadomconsultas.com	esquivensa	notif
 automayor	/opt/automayorlistas	automayor.vadomconsultas.com	automayor	
 campesa	/opt/listas_campesa	campesa.vadomconsultas.com	campesa	
 golden	/opt/golden_listas	golden.vadomconsultas.com	golden	
-redp	/opt/redp_listas	redp.vadomconsultas.com	redpapaz	prefijo S3 = redpapaz
+redp	/opt/redp_listas	redpapaz.vadomconsultas.com	redpapaz	dominio y prefijo S3 = redpapaz (la clave corta es "redp")
 compas	/opt/listas_restrictivas	compas.vadomconsultas.com	compas	
