@@ -13,6 +13,7 @@ urlpatterns = [
 
     # Reportes
     path('reporte-mensual/', views.ReporteMensualView.as_view(), name='reporte_mensual'),
+    path('reporte-mensual/excel/', views.ExportarHistoricoExcelView.as_view(), name='exportar_historico_excel'),
 
     # Cupos por empresa
     path('empresas/', views.EmpresaListView.as_view(), name='empresa_list'),

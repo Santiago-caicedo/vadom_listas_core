@@ -1,5 +1,8 @@
 from django.views.generic import TemplateView, ListView, UpdateView, CreateView, DeleteView
+from django.views import View
+from django.http import HttpResponse
 from .mixins import SuperuserRequiredMixin
+from .exports import construir_libro_historico
 from django.utils import timezone
 from datetime import datetime
 from django.db.models.functions import TruncDay
@@ -149,6 +152,23 @@ class ReporteMensualView(SuperuserRequiredMixin, TemplateView):
         context['total_consultas_mes'] = consultas_del_mes.count()
 
         return context
+
+
+class ExportarHistoricoExcelView(SuperuserRequiredMixin, View):
+    """
+    Descarga un Excel con el histórico completo de consultas agrupado por mes
+    y por empresa, incluyendo totales y promedio mensual.
+    """
+
+    def get(self, request, *args, **kwargs):
+        wb, nombre_archivo = construir_libro_historico()
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        wb.save(response)
+        return response
 
 
 # --- VISTAS PARA GESTIONAR USUARIOS ---

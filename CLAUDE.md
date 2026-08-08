@@ -150,8 +150,15 @@ comertex_listas/
 | `/cargas-masivas/` | `LoteListView` - Todos los lotes |
 | `/cargas-masivas/procesar/<pk>/` | `LoteProcessView` |
 | `/reporte-mensual/` | `ReporteMensualView` |
+| `/reporte-mensual/excel/` | `ExportarHistoricoExcelView` - Descarga el histórico en Excel |
 
 **Formularios:** `UsuarioCreateForm`, `UsuarioEditForm`, `ProcesarLoteForm`
+
+**Export a Excel** (`core_admin/exports.py`, requiere `openpyxl`): genera un libro con
+dos hojas — "Consultas por mes" (matriz meses × empresas + fila de totales y de
+promedio mensual) y "Resumen por empresa" (total, promedio, mes pico, meses activos).
+El rango de meses es continuo desde la primera hasta la última consulta e incluye los
+meses sin actividad en 0, para que el promedio mensual no quede inflado.
 
 ---
 
