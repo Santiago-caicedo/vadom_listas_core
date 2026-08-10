@@ -41,5 +41,29 @@ class Resultado(models.Model):
     # Campo para nuestra clasificación interna
     clasificacion = models.CharField(max_length=20, default='No Clasificado') # Opciones: Rojo, Amarillo, PEP's
 
+    def save(self, *args, **kwargs):
+        """
+        Blindaje contra datos malformados del webservice del proveedor.
+
+        Dos problemas reales vistos en producción:
+          - Caracteres NUL (0x00) en el texto: PostgreSQL los rechaza y el
+            INSERT tumba la consulta entera con un error 500.
+          - Textos más largos que la columna: mismo efecto.
+
+        Antes que perder la consulta del analista, se guarda el dato saneado.
+        """
+        for campo in self._meta.fields:
+            if not isinstance(campo, (models.CharField, models.TextField)):
+                continue
+            valor = getattr(self, campo.attname, None)
+            if not isinstance(valor, str):
+                continue
+            limpio = valor.replace('\x00', '')
+            if campo.max_length:
+                limpio = limpio[:campo.max_length]
+            if limpio != valor:
+                setattr(self, campo.attname, limpio)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Resultado para {self.nombre_completo or 'Desconocido'} ({self.identificacion or 'N/A'})"

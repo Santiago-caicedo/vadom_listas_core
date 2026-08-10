@@ -1,36 +1,86 @@
 # archivo: consultas/services.py
 
+import logging
+
 import requests
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
+
+
+def _sanear(valor):
+    """
+    Limpia recursivamente lo que devuelve el webservice del proveedor.
+
+    PostgreSQL NO admite el carácter NUL (0x00) dentro de columnas de texto:
+    si llega uno, el INSERT falla con "A string literal cannot contain NUL
+    (0x00) characters" y se cae la consulta completa con un error 500.
+    El proveedor ha enviado datos con ese carácter (incidente del 10-ago-2026),
+    así que se limpia aquí, en la frontera, antes de que llegue a los modelos.
+    """
+    if isinstance(valor, str):
+        return valor.replace('\x00', '')
+    if isinstance(valor, dict):
+        return {k: _sanear(v) for k, v in valor.items()}
+    if isinstance(valor, list):
+        return [_sanear(v) for v in valor]
+    return valor
+
+
 def _realizar_peticion(url):
-    """Función auxiliar para realizar peticiones y manejar errores comunes."""
+    """
+    Consulta el webservice de listas.
+
+    Devuelve la lista de resultados, o None si el servicio no está disponible
+    o respondió algo que no se puede interpretar. Devolver None es importante:
+    la vista lo traduce en "servicio no disponible" y NO guarda la búsqueda,
+    para no mostrarle al analista un falso "sin hallazgos".
+    """
     try:
-        # Hacemos la petición GET con un tiempo de espera de 20 segundos
         response = requests.get(url, timeout=20)
 
-        # Si la petición fue exitosa (código 200 OK)
-        if response.status_code == 200:
-            # Si responde 200 pero el cuerpo no es JSON (mantenimiento, proxy, HTML) -> falla
-            try:
-                data = response.json()
-            except ValueError:
-                print("El API respondió 200 pero no es JSON válido")
-                return None
-            # El API puede responder 200 con un error de aplicación en 'MensajeError' -> falla
-            if data.get('MensajeError'):
-                print(f"Error del API (MensajeError): {data['MensajeError']}")
-                return None
-            # El manual indica que los datos vienen en la llave "Resultados"
-            return data.get('Resultados', [])
-        else:
-            # Si el API responde con un error (404, 500, etc.)
-            print(f"Error en la respuesta del API: {response.status_code} - {response.text}")
+        if response.status_code != 200:
+            logger.error("El API de listas respondió %s: %s",
+                         response.status_code, response.text[:300])
             return None
+
+        # Responde 200 pero el cuerpo no es JSON (mantenimiento, proxy, HTML)
+        try:
+            data = response.json()
+        except ValueError:
+            logger.error("El API de listas respondió 200 pero no es JSON válido: %s",
+                         response.text[:300])
+            return None
+
+        # El JSON parseó, pero puede no ser un objeto (null, lista, número...)
+        # cuando el servicio está a medio romper.
+        if not isinstance(data, dict):
+            logger.error("El API de listas devolvió un JSON inesperado (%s): %s",
+                         type(data).__name__, str(data)[:300])
+            return None
+
+        # El API puede responder 200 con un error de aplicación en 'MensajeError'
+        if data.get('MensajeError'):
+            logger.error("Error del API de listas (MensajeError): %s", data['MensajeError'])
+            return None
+
+        resultados = data.get('Resultados', [])
+        if not isinstance(resultados, list):
+            logger.error("El API de listas devolvió 'Resultados' que no es una lista (%s)",
+                         type(resultados).__name__)
+            return None
+
+        return _sanear(resultados)
+
     except requests.exceptions.RequestException as e:
-        # Si hay un error de conexión (no hay internet, el servidor está caído, etc.)
-        print(f"Error de conexión con el API: {e}")
+        logger.error("Error de conexión con el API de listas: %s", e)
         return None
+    except Exception:
+        # Red de seguridad: ante CUALQUIER otra cosa inesperada preferimos
+        # decir "servicio no disponible" antes que tumbar la consulta.
+        logger.exception("Fallo inesperado consultando el API de listas")
+        return None
+
 
 def consultar_api_por_id(identificacion):
     """Se conecta al Web Service para consultar una identificación exacta."""
@@ -39,12 +89,14 @@ def consultar_api_por_id(identificacion):
     url = f"{base_url}PepsExactaID/{token}/{identificacion}"
     return _realizar_peticion(url)
 
+
 def consultar_api_por_nombre(nombres):
     """Se conecta al Web Service para consultar por nombre."""
     token = settings.API_TOKEN
     base_url = settings.API_BASE_URL
-    url = f"{base_url}PepsNombre/{token}/{nombres.upper()}" # Nombres suelen ir en mayúscula
+    url = f"{base_url}PepsNombre/{token}/{nombres.upper()}"  # Nombres suelen ir en mayúscula
     return _realizar_peticion(url)
+
 
 def consultar_api_por_id_y_nombre(identificacion, nombres):
     """Se conecta al Web Service para consultar por ID y nombre."""

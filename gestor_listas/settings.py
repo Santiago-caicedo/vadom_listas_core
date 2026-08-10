@@ -273,3 +273,50 @@ else:
             "BACKEND": "gestor_listas.settings.StaticStorage",
         },
     }
+
+
+# --- REGISTRO DE ERRORES ---------------------------------------------------
+# Sin esto, con DEBUG=False Django NO escribe los tracebacks en ningún lado
+# (su configuración interna solo los manda a consola si DEBUG=True, o por
+# correo a ADMINS). Resultado: un error 500 en producción no deja rastro.
+# Aquí los mandamos a stderr, que mod_wsgi redirige al ErrorLog de Apache
+# del cliente (/var/log/apache2/<cliente>_error.log).
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detallado': {
+            'format': '[{asctime}] {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'consola': {
+            'class': 'logging.StreamHandler',   # stderr -> ErrorLog de Apache
+            'formatter': 'detallado',
+        },
+    },
+    'root': {
+        'handlers': ['consola'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        # Tracebacks de las peticiones que fallan (error 500)
+        'django.request': {
+            'handlers': ['consola'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        # Nuestro propio código (services.py, notifications.py, ...)
+        'consultas': {
+            'handlers': ['consola'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'cargas_masivas': {
+            'handlers': ['consola'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
