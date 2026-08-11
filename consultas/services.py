@@ -1,11 +1,37 @@
 # archivo: consultas/services.py
 
 import logging
+import re
+from urllib.parse import quote
 
 import requests
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+# El servidor del proveedor corre sobre ASP.NET, que rechaza ciertos caracteres
+# en la RUTA de la URL con "A potentially dangerous Request.Path value was
+# detected from the client". No sirve codificarlos: los bloquea igual.
+# Verificado el 11-ago-2026: & < > * : ? % devuelven HTTP 400 y \ devuelve 404.
+# Sin esto, una empresa como "INDUSTRIAS S&S JEANS S.A.S" nunca se puede
+# consultar y el analista ve un falso "servicio no disponible".
+_CARACTERES_PROHIBIDOS = re.compile(r'[&<>*:?%\\]+')
+
+
+def _preparar_nombre(nombres):
+    """
+    Deja el nombre en una forma que el webservice del proveedor acepte.
+
+    Los caracteres que su servidor rechaza se reemplazan por espacios. Como el
+    proveedor hace coincidencia aproximada por nombre, la búsqueda se conserva:
+    "INDUSTRIAS S&S JEANS" se consulta como "INDUSTRIAS S S JEANS".
+    """
+    original = (nombres or '').strip()
+    limpio = _CARACTERES_PROHIBIDOS.sub(' ', original)
+    limpio = re.sub(r'\s+', ' ', limpio).strip().upper()
+    if limpio != original.upper():
+        logger.info("Nombre saneado para el webservice: %r -> %r", original, limpio)
+    return quote(limpio, safe='')
 
 
 def _sanear(valor):
@@ -86,7 +112,7 @@ def consultar_api_por_id(identificacion):
     """Se conecta al Web Service para consultar una identificación exacta."""
     token = settings.API_TOKEN
     base_url = settings.API_BASE_URL
-    url = f"{base_url}PepsExactaID/{token}/{identificacion}"
+    url = f"{base_url}PepsExactaID/{token}/{quote(str(identificacion).strip(), safe='')}"
     return _realizar_peticion(url)
 
 
@@ -94,7 +120,7 @@ def consultar_api_por_nombre(nombres):
     """Se conecta al Web Service para consultar por nombre."""
     token = settings.API_TOKEN
     base_url = settings.API_BASE_URL
-    url = f"{base_url}PepsNombre/{token}/{nombres.upper()}"  # Nombres suelen ir en mayúscula
+    url = f"{base_url}PepsNombre/{token}/{_preparar_nombre(nombres)}"
     return _realizar_peticion(url)
 
 
@@ -102,5 +128,7 @@ def consultar_api_por_id_y_nombre(identificacion, nombres):
     """Se conecta al Web Service para consultar por ID y nombre."""
     token = settings.API_TOKEN
     base_url = settings.API_BASE_URL
-    url = f"{base_url}PepsIDNombre/{token}/{identificacion}/{nombres.upper()}"
+    url = (f"{base_url}PepsIDNombre/{token}"
+           f"/{quote(str(identificacion).strip(), safe='')}"
+           f"/{_preparar_nombre(nombres)}")
     return _realizar_peticion(url)
