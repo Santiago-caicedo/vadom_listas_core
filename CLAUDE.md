@@ -264,7 +264,8 @@ consultado, tomados de la Consulta de Procesos Nacional Unificada.
   "mostrando X de Y" en vez de truncar en silencio.
 - La consulta ocurre dentro de la petición del analista: `CPNU_TIMEOUT` y
   `CPNU_REINTENTOS` acotan cuánto puede tardar la página si la Rama está caída.
-- **`CONSULTAR_PROCESOS_JUDICIALES` es un interruptor TOTAL por cliente**: en `False`
+- **`CONSULTAR_PROCESOS_JUDICIALES` es un interruptor TOTAL por cliente, apagado
+  por defecto** (se enciende con `True` en el `.env` del cliente): en `False`
   no se consulta la Rama, la URL `proceso-judicial/...` devuelve 404 y la sección
   desaparece de la ficha y del PDF aunque haya procesos guardados (los datos no se
   borran, solo dejan de mostrarse). Los templates lo reciben como
@@ -336,8 +337,8 @@ EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 ADMIN_EMAIL=
 
-# Procesos judiciales (Rama Judicial / CPNU)
-CONSULTAR_PROCESOS_JUDICIALES=True
+# Procesos judiciales (Rama Judicial / CPNU) — apagado por defecto
+CONSULTAR_PROCESOS_JUDICIALES=False
 # Opcionales (tienen defaults): CPNU_TIMEOUT, CPNU_REINTENTOS, CPNU_MAX_PAGINAS
 ```
 

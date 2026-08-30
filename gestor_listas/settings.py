@@ -210,8 +210,9 @@ EMAIL_ALERTA_CUPO = config('EMAIL_ALERTA_CUPO', default=ADMIN_EMAIL)
 # Interruptor TOTAL por cliente: en False no se consulta la Rama, la URL del
 # detalle devuelve 404 y la sección desaparece de la ficha y del PDF (aunque la
 # búsqueda tenga procesos guardados de cuando estuvo activa; los datos no se
-# borran, solo dejan de mostrarse). Sirve para desplegar por etapas.
-CONSULTAR_PROCESOS_JUDICIALES = config('CONSULTAR_PROCESOS_JUDICIALES', default=True, cast=bool)
+# borran, solo dejan de mostrarse). Default False: cada cliente se enciende
+# explícitamente desde su .env cuando se decida activarle la feature.
+CONSULTAR_PROCESOS_JUDICIALES = config('CONSULTAR_PROCESOS_JUDICIALES', default=False, cast=bool)
 
 # La API vive en el puerto 448 (el 443 sirve la SPA del portal, no la API).
 CPNU_BASE_URL = config(
