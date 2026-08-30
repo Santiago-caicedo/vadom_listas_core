@@ -98,13 +98,18 @@ comertex_listas/
 | `/historial/` | `historial_busquedas` | Lista búsquedas del usuario |
 | `/historial/<id>/` | `detalle_busqueda` | Detalle con resultados |
 | `/historial/<id>/pdf/` | `generar_pdf_busqueda` | Genera PDF (WeasyPrint) |
+| `/proceso-judicial/<id_proceso>/` | `detalle_proceso_judicial` | Detalle y actuaciones de un proceso (consulta en vivo a la Rama) |
 | `/gestion/` | `gestion_dashboard` | Dashboard para Superior de empresa |
 | `/gestion/consultas/` | `gestion_consultas` | Lista consultas de la empresa |
 | `/gestion/consultas/<id>/` | `gestion_detalle_busqueda` | Detalle (vista Superior) |
 
 **Modelos:**
-- `Busqueda`: Registro de cada consulta (usuario, término, fecha, flags)
+- `Busqueda`: Registro de cada consulta (usuario, término, fecha, flags, estado de la consulta judicial)
 - `Resultado`: Cada coincidencia del API (mapea BlsWsConsultaPeps)
+- `ProcesoJudicial`: Cada proceso encontrado en la Rama Judicial para esa búsqueda
+- `TextoSaneadoMixin`: quita NUL (0x00) y recorta al `max_length` antes de guardar.
+  Lo usan los modelos que persisten datos de terceros (`Resultado`, `ProcesoJudicial`),
+  porque PostgreSQL rechaza el NUL y tumbaba la consulta con un error 500.
 
 **Decorador:** `@superior_required` - Verifica que el usuario sea `es_superior` o `is_superuser`
 
@@ -228,6 +233,44 @@ https://www.consultalistaspeps.com/ClientArea/BLS_WS_BLS/ConsultaListasPeps.svc/
 
 ---
 
+## Procesos Judiciales — Rama Judicial (CPNU)
+
+Consulta **complementaria** a las listas restrictivas: los procesos judiciales del nombre
+consultado, tomados de la Consulta de Procesos Nacional Unificada.
+
+**Implementación:** `consultas/services_judicial.py`
+
+| Función | Endpoint | Descripción |
+|---|---|---|
+| `consultar_procesos_judiciales(nombre)` | `/Procesos/Consulta/NombreRazonSocial` | Busca por nombre; recorre páginas. Devuelve `(procesos, total_reportado)` |
+| `consultar_detalle_proceso(id)` | `/Proceso/Detalle/{id}` | Ficha del proceso |
+| `consultar_actuaciones_proceso(id)` | `/Proceso/Actuaciones/{id}` | Movimientos del proceso |
+| `clasificar_proceso(despacho)` | — | Penal / Disciplinario / Administrativo / Laboral / Familia / Civil / Otro |
+
+**Cosas que hay que tener presentes:**
+- El host es `https://consultaprocesos.ramajudicial.gov.co:448/api/v2` — **puerto 448**
+  (el 443 sirve la SPA del portal, no la API). No requiere autenticación, pero sí
+  headers de navegador.
+- **Solo busca por NOMBRE** y no devuelve documento → puede traer **homónimos**. Por eso
+  la información se presenta siempre como informativa y con verificación manual.
+  Si la búsqueda fue solo por documento, no se consulta la Rama.
+- El portal es intermitente (503). Si no responde, `judicial_estado='no_disponible'`,
+  que **nunca** se muestra como "sin procesos" — misma regla anti-falso-negativo que
+  el webservice de listas.
+- Es **best-effort**: cualquier fallo se registra en el log pero no interrumpe la
+  búsqueda LAFT, y no se consulta si el webservice de listas falló (no hay `Busqueda`).
+- Solo se traen las primeras `CPNU_MAX_PAGINAS` páginas (20 procesos c/u). Se guarda el
+  total que reporta la Rama en `Busqueda.judicial_total_reportado` para mostrar
+  "mostrando X de Y" en vez de truncar en silencio.
+- La consulta ocurre dentro de la petición del analista: `CPNU_TIMEOUT` y
+  `CPNU_REINTENTOS` acotan cuánto puede tardar la página si la Rama está caída.
+
+**Dónde se ve:** sección "Procesos Judiciales" en `detalle_busqueda.html` (con filtros por
+categoría y radicado enlazado al detalle), en el PDF (`reporte_pdf.html`) y la página
+`detalle_proceso_judicial.html`.
+
+---
+
 ## Sistema de Clasificación de Riesgo
 
 Implementado en `consultas/views.py:get_classification()`
@@ -286,6 +329,10 @@ EMAIL_HOST_PASSWORD=
 EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 ADMIN_EMAIL=
+
+# Procesos judiciales (Rama Judicial / CPNU)
+CONSULTAR_PROCESOS_JUDICIALES=True
+# Opcionales (tienen defaults): CPNU_TIMEOUT, CPNU_REINTENTOS, CPNU_MAX_PAGINAS
 ```
 
 ---
@@ -401,6 +448,7 @@ python manage.py createsuperuser
 | Tarea | Archivo(s) |
 |-------|------------|
 | Agregar método API | `consultas/services.py` |
+| Consulta de procesos judiciales | `consultas/services_judicial.py` |
 | Modificar clasificación | `consultas/views.py` → `get_classification()` |
 | Cambiar campos guardados | `consultas/models.py`, `consultas/views.py` |
 | Dashboard cliente | `consultas/views.py` → `dashboard()`, `templates/consultas/dashboard.html` |

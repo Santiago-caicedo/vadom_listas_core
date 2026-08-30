@@ -135,6 +135,59 @@
             <p>No se encontraron hallazgos para esta consulta.</p>
         {% endfor %}
     </section>
+    {% if busqueda.judicial_estado != 'no_consultado' %}
+    <section class="judicial-section-pdf" style="margin-top: 20px;">
+        <h2 class="section-title">Procesos Judiciales — Rama Judicial</h2>
+        <p style="font-size: 10px; color: #666; margin-top: -10px; margin-bottom: 12px;">
+            Consulta de Procesos Nacional Unificada. Búsqueda por nombre (puede incluir homónimos).
+            Información de carácter informativo, requiere verificación manual.
+        </p>
+        {% if busqueda.judicial_estado == 'no_disponible' %}
+            <p style="font-size: 11px; color: #664d03; background:#fff3cd; padding:8px 10px; border-radius:6px;">
+                No se pudo consultar la Rama Judicial en el momento de esta búsqueda.
+                Esto no significa que no existan procesos.
+            </p>
+        {% elif busqueda.procesos_judiciales.all %}
+            {% with mostrados=busqueda.procesos_judiciales.count %}
+            {% if busqueda.judicial_total_reportado > mostrados %}
+            <p style="font-size: 11px; color:#664d03; background:#fff3cd; padding:8px 10px; border-radius:6px; margin-bottom: 8px;">
+                Mostrando {{ mostrados }} de {{ busqueda.judicial_total_reportado }} procesos que reporta
+                la Rama Judicial para este nombre.
+            </p>
+            {% else %}
+            <p style="font-size: 11px; margin-bottom: 8px;">
+                {{ mostrados }} proceso{{ mostrados|pluralize:"s" }} encontrado{{ mostrados|pluralize:"s" }}.
+            </p>
+            {% endif %}
+            {% endwith %}
+            <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                <thead>
+                    <tr style="background:#f1f3f5;">
+                        <th style="text-align:left; padding:5px; border:1px solid #dee2e6;">Tipo</th>
+                        <th style="text-align:left; padding:5px; border:1px solid #dee2e6;">Radicado</th>
+                        <th style="text-align:left; padding:5px; border:1px solid #dee2e6;">Fecha</th>
+                        <th style="text-align:left; padding:5px; border:1px solid #dee2e6;">Despacho</th>
+                        <th style="text-align:left; padding:5px; border:1px solid #dee2e6;">Sujetos procesales</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in busqueda.procesos_judiciales.all %}
+                    <tr>
+                        <td style="padding:5px; border:1px solid #dee2e6;">{{ p.categoria }}</td>
+                        <td style="padding:5px; border:1px solid #dee2e6; white-space:nowrap;">{{ p.radicado|default:"—" }}</td>
+                        <td style="padding:5px; border:1px solid #dee2e6; white-space:nowrap;">{{ p.fecha_proceso|slice:":10"|default:"—" }}</td>
+                        <td style="padding:5px; border:1px solid #dee2e6;">{{ p.despacho|default:"—" }}</td>
+                        <td style="padding:5px; border:1px solid #dee2e6;">{{ p.sujetos_procesales|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="font-size: 11px; color: #495057;">Sin procesos judiciales para el nombre consultado.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
 
     <section class="sources-section">
         <h2 class="section-title">Bases de Información Consultadas</h2>

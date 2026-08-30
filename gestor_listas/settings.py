@@ -203,6 +203,26 @@ NOTIFICAR_EXCESO_CUPO = config('NOTIFICAR_EXCESO_CUPO', default=True, cast=bool)
 # Correo que recibe esos avisos (por defecto, el ADMIN_EMAIL).
 EMAIL_ALERTA_CUPO = config('EMAIL_ALERTA_CUPO', default=ADMIN_EMAIL)
 
+# --- Procesos judiciales (Rama Judicial / CPNU) ------------------------------
+# Consulta complementaria a las listas restrictivas: procesos judiciales del
+# nombre consultado. Es INFORMATIVA (la Rama solo busca por nombre y no devuelve
+# documento, así que puede traer homónimos) y nunca bloquea la búsqueda LAFT.
+# Se puede apagar por cliente para hacer el despliegue por etapas.
+CONSULTAR_PROCESOS_JUDICIALES = config('CONSULTAR_PROCESOS_JUDICIALES', default=True, cast=bool)
+
+# La API vive en el puerto 448 (el 443 sirve la SPA del portal, no la API).
+CPNU_BASE_URL = config(
+    'CPNU_BASE_URL',
+    default='https://consultaprocesos.ramajudicial.gov.co:448/api/v2',
+)
+# Esta consulta ocurre dentro de la petición del analista: el peor caso (Rama
+# caída) es CPNU_REINTENTOS x CPNU_TIMEOUT + las esperas del backoff.
+CPNU_TIMEOUT = config('CPNU_TIMEOUT', default=15, cast=int)
+CPNU_REINTENTOS = config('CPNU_REINTENTOS', default=2, cast=int)
+# Páginas de 20 procesos. Con 5 se traen máximo 100; si el nombre tiene más,
+# se guarda el total que reporta la Rama y la ficha avisa "mostrando X de Y".
+CPNU_MAX_PAGINAS = config('CPNU_MAX_PAGINAS', default=5, cast=int)
+
 
 # ===========================================
 # CONFIGURACIÓN HÍBRIDA DE ARCHIVOS ESTÁTICOS Y MEDIA

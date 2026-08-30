@@ -6,7 +6,13 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from .forms import BusquedaForm
 from .services import consultar_api_por_id, consultar_api_por_id_y_nombre, consultar_api_por_nombre
-from .models import Busqueda, Resultado # <-- IMPORTAMOS LOS MODELOS
+from .services_judicial import (
+    consultar_procesos_judiciales,
+    consultar_detalle_proceso,
+    consultar_actuaciones_proceso,
+    clasificar_proceso,
+)
+from .models import Busqueda, Resultado, ProcesoJudicial # <-- IMPORTAMOS LOS MODELOS
 from .notifications import notificar_superiores_hallazgo, notificar_exceso_cupo
 from .utils import periodo_cupo
 from django.utils import timezone
@@ -15,6 +21,9 @@ from django.template.loader import render_to_string
 from datetime import timedelta
 from django.db.models import Count
 from django.db.models.functions import TruncDay
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # --- FUNCIÓN AUXILIAR PARA CLASIFICAR ---
@@ -46,6 +55,65 @@ def get_classification(tipo_lista):
     # 3. Todo lo demás es Rojo
     return "Rojo"
 # --- FIN FUNCIÓN AUXILIAR ---
+
+
+def guardar_procesos_judiciales(busqueda_obj, nombres):
+    """
+    Consulta la Rama Judicial (CPNU) por nombre y guarda los procesos encontrados.
+    Best-effort: cualquier fallo se registra pero NO interrumpe la búsqueda LAFT,
+    que es la consulta que el analista vino a hacer.
+    Marca busqueda_obj.judicial_estado: 'ok' | 'no_disponible'.
+    """
+    try:
+        procesos, total_reportado = consultar_procesos_judiciales(nombres)
+        if procesos is None:
+            # La Rama no respondió. NO se muestra como "sin procesos".
+            busqueda_obj.judicial_estado = 'no_disponible'
+            busqueda_obj.judicial_total_reportado = 0
+        else:
+            busqueda_obj.judicial_estado = 'ok'
+            busqueda_obj.judicial_total_reportado = total_reportado
+            for p in procesos:
+                despacho = p.get('despacho')
+                ProcesoJudicial.objects.create(
+                    busqueda=busqueda_obj,
+                    id_proceso=str(p.get('idProceso') or ''),
+                    radicado=p.get('llaveProceso'),
+                    fecha_proceso=p.get('fechaProceso'),
+                    fecha_ultima_actuacion=p.get('fechaUltimaActuacion'),
+                    despacho=despacho,
+                    departamento=p.get('departamento'),
+                    sujetos_procesales=p.get('sujetosProcesales'),
+                    es_privado=p.get('esPrivado', False),
+                    categoria=clasificar_proceso(despacho),
+                )
+        busqueda_obj.save(update_fields=['judicial_estado', 'judicial_total_reportado'])
+    except Exception:
+        logger.exception("Error consultando procesos judiciales (búsqueda #%s)",
+                         getattr(busqueda_obj, 'id', '?'))
+        busqueda_obj.judicial_estado = 'no_disponible'
+        busqueda_obj.judicial_total_reportado = 0
+        busqueda_obj.save(update_fields=['judicial_estado', 'judicial_total_reportado'])
+
+
+@login_required
+def detalle_proceso_judicial(request, id_proceso):
+    """
+    Muestra el detalle y las actuaciones (movimientos) de un proceso judicial,
+    consultados EN VIVO a la Rama Judicial (no se guardan en BD).
+    """
+    detalle = consultar_detalle_proceso(id_proceso)
+    actuaciones_data = consultar_actuaciones_proceso(id_proceso)
+    actuaciones = actuaciones_data.get('actuaciones', []) if actuaciones_data else []
+
+    context = {
+        'id_proceso': id_proceso,
+        'detalle': detalle,               # None si la Rama no respondió
+        'actuaciones': actuaciones,
+        'no_disponible': detalle is None and not actuaciones,
+    }
+    return render(request, 'consultas/detalle_proceso_judicial.html', context)
+
 
 @login_required
 def pagina_busqueda(request):
@@ -134,6 +202,14 @@ def pagina_busqueda(request):
                     if alerta_generada:
                         busqueda_obj.genero_alerta = True
                     busqueda_obj.save()
+
+                    # --- Procesos judiciales (Rama Judicial / CPNU) ---
+                    # La API de la Rama solo busca por NOMBRE; si la consulta fue
+                    # solo por documento no hay nada que preguntarle.
+                    # Va aquí dentro a propósito: si el webservice de listas falló
+                    # no existe busqueda_obj y no se consulta nada.
+                    if settings.CONSULTAR_PROCESOS_JUDICIALES and nombres:
+                        guardar_procesos_judiciales(busqueda_obj, nombres)
 
                     # Notificar a los superiores de la empresa si hubo hallazgos
                     # (configurable por cliente con NOTIFICAR_HALLAZGOS en el .env)

@@ -1,0 +1,86 @@
+{% extends 'consultas/base.html' %}
+
+{% block title %}Detalle del Proceso Judicial | Plataforma LAFT{% endblock %}
+
+{% block content %}
+<style>
+    .pj-wrap { max-width: 1000px; }
+    .pj-head { background: linear-gradient(135deg, #1b7783, #145a63); color: #fff;
+        border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    .pj-head h4 { margin: 0 0 .25rem; font-weight: 700; }
+    .pj-head .rad { font-family: monospace; opacity: .9; }
+    .pj-card { background: #fff; border: 1px solid #e9ecef; border-radius: 12px;
+        padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+    .pj-card h5 { color: #1b7783; font-weight: 700; margin: 0 0 1rem; }
+    .pj-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .75rem 1.5rem; }
+    .pj-field .lbl { font-size: .72rem; text-transform: uppercase; color: #6c757d; letter-spacing: .03em; }
+    .pj-field .val { color: #212529; font-weight: 500; }
+    .pj-alert { padding: .85rem 1rem; border-radius: 8px; background: #fff3cd; color: #664d03; }
+    .pj-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .pj-table th { text-align: left; padding: .55rem .6rem; border-bottom: 2px solid #dee2e6;
+        color: #6c757d; font-weight: 600; white-space: nowrap; }
+    .pj-table td { padding: .55rem .6rem; border-bottom: 1px solid #f1f3f5; vertical-align: top; }
+    .pj-table tr:hover td { background: #f8f9fa; }
+    .pj-table .fecha { white-space: nowrap; font-family: monospace; }
+    .pj-back { display: inline-flex; align-items: center; gap: .4rem; color: #1b7783;
+        text-decoration: none; font-weight: 600; margin-bottom: 1rem; }
+</style>
+
+<div class="pj-wrap">
+    <a href="javascript:history.back()" class="pj-back"><i class="bi bi-arrow-left"></i> Volver</a>
+
+    {% if no_disponible %}
+        <div class="pj-alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            No se pudo consultar este proceso en la Rama Judicial en este momento. Intenta más tarde.
+        </div>
+    {% else %}
+        <div class="pj-head">
+            <h4>Proceso Judicial</h4>
+            {% if detalle %}<span class="rad">{{ detalle.llaveProceso }}</span>{% endif %}
+        </div>
+
+        {% if detalle %}
+        <div class="pj-card">
+            <h5><i class="bi bi-info-circle"></i> Información del proceso</h5>
+            <div class="pj-grid">
+                <div class="pj-field"><div class="lbl">Radicado</div><div class="val">{{ detalle.llaveProceso|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Fecha de radicación</div><div class="val">{{ detalle.fechaProceso|slice:":10"|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Despacho</div><div class="val">{{ detalle.despacho|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Ponente</div><div class="val">{{ detalle.ponente|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Tipo de proceso</div><div class="val">{{ detalle.tipoProceso|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Clase de proceso</div><div class="val">{{ detalle.claseProceso|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Subclase</div><div class="val">{{ detalle.subclaseProceso|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Recurso</div><div class="val">{{ detalle.recurso|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Ubicación</div><div class="val">{{ detalle.ubicacion|default:"—" }}</div></div>
+                <div class="pj-field"><div class="lbl">Última actualización</div><div class="val">{{ detalle.ultimaActualizacion|slice:":10"|default:"—" }}</div></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="pj-card">
+            <h5><i class="bi bi-clock-history"></i> Actuaciones ({{ actuaciones|length }})</h5>
+            {% if actuaciones %}
+            <div style="overflow-x:auto;">
+                <table class="pj-table">
+                    <thead>
+                        <tr><th>Fecha</th><th>Actuación</th><th>Anotación</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for a in actuaciones %}
+                        <tr>
+                            <td class="fecha">{{ a.fechaActuacion|slice:":10" }}</td>
+                            <td>{{ a.actuacion }}</td>
+                            <td>{{ a.anotacion|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="text-muted mb-0">Sin actuaciones registradas.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

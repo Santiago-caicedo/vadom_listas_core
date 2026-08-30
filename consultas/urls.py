@@ -14,6 +14,9 @@ urlpatterns = [
 
     path('historial/<int:busqueda_id>/pdf/', views.generar_pdf_busqueda, name='generar_pdf_busqueda'),
 
+    # Detalle de un proceso judicial (Rama Judicial) — consulta en vivo
+    path('proceso-judicial/<str:id_proceso>/', views.detalle_proceso_judicial, name='detalle_proceso_judicial'),
+
     # --- URLs para Superior de Empresa ---
     path('gestion/', views.gestion_dashboard, name='gestion_dashboard'),
     path('gestion/consultas/', views.gestion_consultas, name='gestion_consultas'),

@@ -1,5 +1,6 @@
 """
-Tests de la lógica anti-falso-negativo del webservice de listas (ConsultaListasPeps).
+Tests de la lógica anti-falso-negativo del webservice de listas (ConsultaListasPeps)
+y de la consulta de procesos judiciales (Rama Judicial / CPNU).
 
 Regla de negocio crítica (LAFT):
   - Si el servicio FALLA (de la forma que sea) -> NO se debe guardar la búsqueda
@@ -14,8 +15,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 
-from consultas import services
-from consultas.models import Busqueda
+from consultas import services, services_judicial
+from consultas.models import Busqueda, ProcesoJudicial
 from empresas.models import Empresa
 
 User = get_user_model()
@@ -71,6 +72,7 @@ class RealizarPeticionTests(TestCase):
         self.assertIsNone(services._realizar_peticion('http://x'))
 
 
+@override_settings(CONSULTAR_PROCESOS_JUDICIALES=False)
 class PaginaBusquedaFalloTests(TestCase):
     """La vista pagina_busqueda NO debe registrar un falso negativo si el servicio falla."""
 
@@ -119,6 +121,7 @@ class PaginaBusquedaFalloTests(TestCase):
         self.assertEqual(Busqueda.objects.count(), 0)
 
 
+@override_settings(CONSULTAR_PROCESOS_JUDICIALES=False)
 class CupoYBloqueoTests(TestCase):
     """Cupo mensual por empresa: bloqueo manual corta; exceder solo avisa."""
 
@@ -179,3 +182,180 @@ class CupoYBloqueoTests(TestCase):
         self.client.post(self.url, {'nombres': 'A'})   # consumo 2 -> excede -> aviso 1
         self.client.post(self.url, {'nombres': 'B'})   # consumo 3 -> excede -> aviso 2
         self.assertEqual(mock_avisar.call_count, 2)
+def _respuesta_cpnu(payload, status=200, json_ok=True):
+    """Arma un mock de respuesta de la Rama Judicial."""
+    from unittest.mock import MagicMock
+    resp = MagicMock()
+    resp.status_code = status
+    resp.headers = {'Content-Type': 'application/json' if json_ok else 'text/html'}
+    resp.json.return_value = payload
+    return resp
+
+
+def _pagina(procesos, cantidad_paginas=1, cantidad_registros=None):
+    return {
+        'procesos': procesos,
+        'paginacion': {
+            'cantidadPaginas': cantidad_paginas,
+            'cantidadRegistros': (len(procesos) if cantidad_registros is None
+                                  else cantidad_registros),
+        },
+    }
+
+
+class ServiciosJudicialesTests(TestCase):
+    """La consulta a la Rama Judicial debe distinguir 'no se pudo consultar' (None)
+    de 'no hay procesos' ([]), igual que el webservice de listas."""
+
+    def setUp(self):
+        # Sin esperas de backoff: los tests no deben tardar segundos.
+        parche = patch('consultas.services_judicial.time.sleep')
+        parche.start()
+        self.addCleanup(parche.stop)
+
+    @patch('consultas.services_judicial.requests.get')
+    def test_respuesta_ok_devuelve_procesos_y_total(self, mock_get):
+        mock_get.return_value = _respuesta_cpnu(
+            _pagina([{'idProceso': 1, 'llaveProceso': '11001'}])
+        )
+        procesos, total = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertEqual(len(procesos), 1)
+        self.assertEqual(total, 1)
+
+    @patch('consultas.services_judicial.requests.get')
+    def test_sin_procesos_devuelve_lista_vacia(self, mock_get):
+        # [] NO es None: sí se consultó, simplemente no hay procesos.
+        mock_get.return_value = _respuesta_cpnu(_pagina([]))
+        procesos, total = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertEqual(procesos, [])
+        self.assertEqual(total, 0)
+
+    @patch('consultas.services_judicial.requests.get')
+    def test_rama_caida_devuelve_none(self, mock_get):
+        # 503 en la primera página -> None (no se pudo consultar).
+        mock_get.return_value = _respuesta_cpnu(None, status=503)
+        procesos, total = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertIsNone(procesos)
+        self.assertEqual(total, 0)
+
+    @patch('consultas.services_judicial.requests.get')
+    def test_error_de_conexion_devuelve_none(self, mock_get):
+        mock_get.side_effect = services_judicial.requests.exceptions.RequestException('caído')
+        procesos, _ = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertIsNone(procesos)
+
+    @patch('consultas.services_judicial.requests.get')
+    def test_respuesta_no_json_devuelve_none(self, mock_get):
+        # 200 pero el portal devolvió HTML (mantenimiento) -> no es un "sin procesos".
+        mock_get.return_value = _respuesta_cpnu('<html>', json_ok=False)
+        procesos, _ = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertIsNone(procesos)
+
+    def test_nombre_muy_corto_no_consulta(self):
+        # La API exige mínimo 3 caracteres; no vale la pena molestarla.
+        self.assertEqual(
+            services_judicial.consultar_procesos_judiciales('AB'), (None, 0)
+        )
+
+    @patch('consultas.services_judicial.requests.get')
+    def test_recorre_todas_las_paginas(self, mock_get):
+        mock_get.side_effect = [
+            _respuesta_cpnu(_pagina([{'idProceso': 1}], cantidad_paginas=2, cantidad_registros=2)),
+            _respuesta_cpnu(_pagina([{'idProceso': 2}], cantidad_paginas=2, cantidad_registros=2)),
+        ]
+        procesos, total = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertEqual(len(procesos), 2)
+        self.assertEqual(total, 2)
+
+    @patch('consultas.services_judicial.CPNU_MAX_PAGINAS', 1)
+    @patch('consultas.services_judicial.requests.get')
+    def test_trunca_pero_reporta_el_total_real(self, mock_get):
+        # Con el tope de páginas solo traemos una parte: el total de la Rama se
+        # conserva para poder avisar "mostrando X de Y" en vez de truncar callado.
+        mock_get.return_value = _respuesta_cpnu(
+            _pagina([{'idProceso': 1}], cantidad_paginas=9, cantidad_registros=180)
+        )
+        procesos, total = services_judicial.consultar_procesos_judiciales('JUAN PEREZ')
+        self.assertEqual(len(procesos), 1)
+        self.assertEqual(total, 180)
+
+    def test_clasificacion_por_despacho(self):
+        clasificar = services_judicial.clasificar_proceso
+        self.assertEqual(clasificar('JUZGADO 3 PENAL DEL CIRCUITO DE BOGOTA'), 'Penal')
+        self.assertEqual(clasificar('SALA DISCIPLINARIA'), 'Disciplinario')
+        self.assertEqual(clasificar('TRIBUNAL ADMINISTRATIVO DE SANTANDER'), 'Administrativo')
+        self.assertEqual(clasificar('JUZGADO LABORAL DEL CIRCUITO'), 'Laboral')
+        self.assertEqual(clasificar(''), 'Otro')
+        self.assertEqual(clasificar(None), 'Otro')
+
+
+@override_settings(NOTIFICAR_HALLAZGOS=False, CONSULTAR_PROCESOS_JUDICIALES=True)
+class ProcesosJudicialesEnLaBusquedaTests(TestCase):
+    """La consulta judicial acompaña a la búsqueda LAFT, pero nunca la estorba."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester', password='clave-larga-123')
+        self.client.force_login(self.user)
+        self.url = reverse('pagina_busqueda')
+
+    @patch('consultas.views.consultar_procesos_judiciales')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_guarda_los_procesos_encontrados(self, _mock_api, mock_judicial):
+        mock_judicial.return_value = ([{
+            'idProceso': 12345,
+            'llaveProceso': '11001310300120240001',
+            'fechaProceso': '2024-03-15T00:00:00',
+            'despacho': 'JUZGADO 1 PENAL DEL CIRCUITO DE BOGOTA',
+            'departamento': 'BOGOTA',
+            'sujetosProcesales': 'Demandante: X | Demandado: JUAN PEREZ',
+        }], 1)
+        self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+
+        b = Busqueda.objects.get()
+        self.assertEqual(b.judicial_estado, 'ok')
+        self.assertEqual(b.judicial_total_reportado, 1)
+        proceso = b.procesos_judiciales.get()
+        self.assertEqual(proceso.radicado, '11001310300120240001')
+        self.assertEqual(proceso.categoria, 'Penal')
+
+    @patch('consultas.views.consultar_procesos_judiciales', return_value=(None, 0))
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_rama_caida_no_se_muestra_como_sin_procesos(self, _mock_api, _mock_judicial):
+        # Clave: 'no_disponible' != 'sin procesos'. Y la búsqueda LAFT se conserva.
+        self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        b = Busqueda.objects.get()
+        self.assertEqual(b.judicial_estado, 'no_disponible')
+        self.assertEqual(b.procesos_judiciales.count(), 0)
+
+    @patch('consultas.views.consultar_procesos_judiciales', side_effect=Exception('boom'))
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_un_fallo_inesperado_no_tumba_la_busqueda_laft(self, _mock_api, _mock_judicial):
+        resp = self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        self.assertEqual(resp.status_code, 200)
+        b = Busqueda.objects.get()          # la consulta de listas sí quedó registrada
+        self.assertEqual(b.judicial_estado, 'no_disponible')
+
+    @patch('consultas.views.consultar_procesos_judiciales')
+    @patch('consultas.views.consultar_api_por_id', return_value=[])
+    def test_busqueda_solo_por_documento_no_consulta_la_rama(self, _mock_api, mock_judicial):
+        # La API de la Rama solo busca por nombre: sin nombre no hay nada que preguntar.
+        self.client.post(self.url, {'identificacion': '79149126'})
+        mock_judicial.assert_not_called()
+        self.assertEqual(Busqueda.objects.get().judicial_estado, 'no_consultado')
+
+    @override_settings(CONSULTAR_PROCESOS_JUDICIALES=False)
+    @patch('consultas.views.consultar_procesos_judiciales')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=[])
+    def test_flag_apagado_no_consulta_la_rama(self, _mock_api, mock_judicial):
+        self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        mock_judicial.assert_not_called()
+        self.assertEqual(Busqueda.objects.get().judicial_estado, 'no_consultado')
+
+    @patch('consultas.views.consultar_procesos_judiciales')
+    @patch('consultas.views.consultar_api_por_nombre', return_value=None)
+    def test_si_falla_el_webservice_de_listas_no_se_consulta_la_rama(self, _mock_api, mock_judicial):
+        # No hay Busqueda que colgarle los procesos, y la consulta no ocurrió.
+        self.client.post(self.url, {'nombres': 'JUAN PEREZ'})
+        mock_judicial.assert_not_called()
+        self.assertEqual(Busqueda.objects.count(), 0)
+        self.assertEqual(ProcesoJudicial.objects.count(), 0)

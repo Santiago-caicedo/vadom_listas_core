@@ -519,6 +519,145 @@
 </div>
 {% endif %}
 
+{# ===================== PROCESOS JUDICIALES (Rama Judicial / CPNU) ===================== #}
+{% if busqueda.judicial_estado != 'no_consultado' %}
+<style>
+    .judicial-section { margin-top: 2rem; background: #fff; border: 1px solid #e9ecef;
+        border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+    .judicial-header h5 { margin: 0 0 .35rem; color: #1b7783; font-weight: 700; }
+    .judicial-disclaimer { display: block; font-size: .82rem; color: #6c757d;
+        background: #f1f7f8; border-left: 3px solid #1b7783; padding: .5rem .75rem;
+        border-radius: 6px; margin-bottom: 1rem; }
+    .judicial-count { font-size: .9rem; color: #495057; margin-bottom: .6rem; font-weight: 600; }
+    .judicial-truncado { font-weight: 500; color: #664d03; background: #fff3cd;
+        padding: .5rem .75rem; border-radius: 6px; margin-bottom: .6rem; font-size: .85rem; }
+    .judicial-alert { padding: .75rem 1rem; border-radius: 8px; font-size: .9rem; }
+    .judicial-alert.warn { background: #fff3cd; color: #664d03; }
+    .judicial-alert.ok   { background: #e9ecef; color: #495057; }
+    .judicial-table-wrap { overflow-x: auto; }
+    .judicial-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .judicial-table th { text-align: left; padding: .55rem .6rem; border-bottom: 2px solid #dee2e6;
+        color: #6c757d; font-weight: 600; white-space: nowrap; }
+    .judicial-table td { padding: .55rem .6rem; border-bottom: 1px solid #f1f3f5; vertical-align: top; }
+    .judicial-table tr:hover td { background: #f8f9fa; }
+    .judicial-table .mono { font-family: monospace; white-space: nowrap; }
+    .judicial-table .sujetos { color: #495057; min-width: 320px; }
+    .judicial-table a.rad-link { color: #1b7783; font-weight: 600; text-decoration: none; }
+    .judicial-table a.rad-link:hover { text-decoration: underline; }
+    .cat-badge { display: inline-block; padding: .15rem .55rem; border-radius: 50px;
+        font-size: .72rem; font-weight: 600; white-space: nowrap; }
+    .cat-badge.Penal { background: #f8d7da; color: #842029; }
+    .cat-badge.Disciplinario { background: #fff3cd; color: #664d03; }
+    .cat-badge.Administrativo { background: #cfe2ff; color: #084298; }
+    .cat-badge.Laboral, .cat-badge.Familia, .cat-badge.Civil, .cat-badge.Otro { background: #e9ecef; color: #495057; }
+    .judicial-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .judicial-filters button { border: 1px solid #ced4da; background: #fff; color: #495057;
+        border-radius: 50px; padding: .25rem .8rem; font-size: .8rem; cursor: pointer; }
+    .judicial-filters button.active { background: #1b7783; color: #fff; border-color: #1b7783; }
+</style>
+<div class="judicial-section">
+    <div class="judicial-header">
+        <h5><i class="bi bi-bank2"></i> Procesos Judiciales — Rama Judicial</h5>
+        <span class="judicial-disclaimer">
+            <i class="bi bi-info-circle"></i>
+            Datos de la Consulta de Procesos Nacional Unificada (Rama Judicial). La búsqueda es
+            <strong>por nombre</strong> y puede incluir homónimos.
+            <strong>Carácter informativo — requiere verificación manual.</strong>
+        </span>
+    </div>
+
+    {% if busqueda.judicial_estado == 'no_disponible' %}
+        <div class="judicial-alert warn">
+            <i class="bi bi-exclamation-triangle"></i>
+            No se pudo consultar la Rama Judicial en este momento (servicio no disponible).
+            Esto <strong>no significa que no existan procesos</strong>: intenta la consulta más tarde.
+        </div>
+    {% elif busqueda.procesos_judiciales.all %}
+        {% with mostrados=busqueda.procesos_judiciales.count %}
+        {% if busqueda.judicial_total_reportado > mostrados %}
+        <div class="judicial-truncado">
+            <i class="bi bi-exclamation-triangle"></i>
+            Mostrando <strong>{{ mostrados }}</strong> de <strong>{{ busqueda.judicial_total_reportado }}</strong>
+            procesos que reporta la Rama Judicial para este nombre. Para ver el resto, consulta
+            directamente el portal de la Rama con un nombre más específico.
+        </div>
+        {% else %}
+        <div class="judicial-count">
+            {{ mostrados }} proceso{{ mostrados|pluralize:"s" }}
+            encontrado{{ mostrados|pluralize:"s" }} para el nombre consultado.
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {# Filtros por categoría (JS abajo) #}
+        <div class="judicial-filters" id="judicialFiltros">
+            <button type="button" class="active" data-filtro="todos">Todos</button>
+            <button type="button" data-filtro="Penal">Penal</button>
+            <button type="button" data-filtro="Disciplinario">Disciplinario</button>
+            <button type="button" data-filtro="Administrativo">Administrativo</button>
+            <button type="button" data-filtro="otros">Otros</button>
+        </div>
+
+        <div class="judicial-table-wrap">
+            <table class="judicial-table" id="judicialTabla">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Radicado</th>
+                        <th>Fecha</th>
+                        <th>Despacho</th>
+                        <th>Sujetos procesales</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in busqueda.procesos_judiciales.all %}
+                    <tr data-categoria="{{ p.categoria }}">
+                        <td><span class="cat-badge {{ p.categoria }}">{{ p.categoria }}</span></td>
+                        <td class="mono">
+                            {% if p.id_proceso %}
+                            <a class="rad-link" href="{% url 'detalle_proceso_judicial' p.id_proceso %}" target="_blank"
+                               title="Ver actuaciones">{{ p.radicado|default:"—" }}</a>
+                            {% else %}{{ p.radicado|default:"—" }}{% endif %}
+                        </td>
+                        <td class="mono">{{ p.fecha_proceso|slice:":10"|default:"—" }}</td>
+                        <td>{{ p.despacho|default:"—" }}</td>
+                        <td class="sujetos">{{ p.sujetos_procesales|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+        (function () {
+            var cont = document.getElementById('judicialFiltros');
+            if (!cont) return;
+            var filas = document.querySelectorAll('#judicialTabla tbody tr');
+            var principales = ['Penal', 'Disciplinario', 'Administrativo'];
+            cont.addEventListener('click', function (e) {
+                var btn = e.target.closest('button');
+                if (!btn) return;
+                cont.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                var f = btn.getAttribute('data-filtro');
+                filas.forEach(function (tr) {
+                    var cat = tr.getAttribute('data-categoria');
+                    var visible = (f === 'todos') ||
+                                  (f === 'otros' ? principales.indexOf(cat) === -1 : cat === f);
+                    tr.style.display = visible ? '' : 'none';
+                });
+            });
+        })();
+        </script>
+    {% else %}
+        <div class="judicial-alert ok">
+            <i class="bi bi-check-circle"></i>
+            Sin procesos judiciales para el nombre consultado.
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
