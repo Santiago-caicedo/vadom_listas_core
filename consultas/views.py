@@ -1,6 +1,6 @@
 # archivo: consultas/views.py
 
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
@@ -102,6 +102,10 @@ def detalle_proceso_judicial(request, id_proceso):
     Muestra el detalle y las actuaciones (movimientos) de un proceso judicial,
     consultados EN VIVO a la Rama Judicial (no se guardan en BD).
     """
+    # Interruptor por cliente: con la feature apagada esta URL no existe.
+    if not settings.CONSULTAR_PROCESOS_JUDICIALES:
+        raise Http404
+
     detalle = consultar_detalle_proceso(id_proceso)
     actuaciones_data = consultar_actuaciones_proceso(id_proceso)
     actuaciones = actuaciones_data.get('actuaciones', []) if actuaciones_data else []
@@ -283,8 +287,11 @@ def detalle_busqueda(request, busqueda_id):
     busqueda = get_object_or_404(Busqueda, pk=busqueda_id, usuario=request.user)
     
     context = {
-        'busqueda': busqueda
+        'busqueda': busqueda,
         # Los resultados asociados ya vienen dentro de 'busqueda.resultados.all'
+        # Interruptor: con la feature apagada, la sección judicial no se muestra
+        # aunque la búsqueda tenga procesos guardados de cuando estuvo activa.
+        'procesos_judiciales_activos': settings.CONSULTAR_PROCESOS_JUDICIALES,
     }
     return render(request, 'consultas/detalle_busqueda.html', context)
 
@@ -387,7 +394,10 @@ def generar_pdf_busqueda(request, busqueda_id):
 
     # 2. Renderizamos la plantilla HTML a una cadena de texto
     #    Pasamos el objeto 'busqueda' al contexto de la plantilla.
-    html_string = render_to_string('consultas/reporte_pdf.html', {'busqueda': busqueda})
+    html_string = render_to_string('consultas/reporte_pdf.html', {
+        'busqueda': busqueda,
+        'procesos_judiciales_activos': settings.CONSULTAR_PROCESOS_JUDICIALES,
+    })
 
     # 3. Usamos WeasyPrint para convertir el HTML en un PDF en memoria
     html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
@@ -570,6 +580,7 @@ def gestion_detalle_busqueda(request, busqueda_id):
     busqueda = get_object_or_404(Busqueda, pk=busqueda_id, usuario__empresa=empresa)
 
     context = {
-        'busqueda': busqueda
+        'busqueda': busqueda,
+        'procesos_judiciales_activos': settings.CONSULTAR_PROCESOS_JUDICIALES,
     }
     return render(request, 'consultas/detalle_busqueda.html', context)

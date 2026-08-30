@@ -135,7 +135,7 @@
             <p>No se encontraron hallazgos para esta consulta.</p>
         {% endfor %}
     </section>
-    {% if busqueda.judicial_estado != 'no_consultado' %}
+    {% if procesos_judiciales_activos and busqueda.judicial_estado != 'no_consultado' %}
     <section class="judicial-section-pdf" style="margin-top: 20px;">
         <h2 class="section-title">Procesos Judiciales — Rama Judicial</h2>
         <p style="font-size: 10px; color: #666; margin-top: -10px; margin-bottom: 12px;">

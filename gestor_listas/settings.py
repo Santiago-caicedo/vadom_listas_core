@@ -207,7 +207,10 @@ EMAIL_ALERTA_CUPO = config('EMAIL_ALERTA_CUPO', default=ADMIN_EMAIL)
 # Consulta complementaria a las listas restrictivas: procesos judiciales del
 # nombre consultado. Es INFORMATIVA (la Rama solo busca por nombre y no devuelve
 # documento, así que puede traer homónimos) y nunca bloquea la búsqueda LAFT.
-# Se puede apagar por cliente para hacer el despliegue por etapas.
+# Interruptor TOTAL por cliente: en False no se consulta la Rama, la URL del
+# detalle devuelve 404 y la sección desaparece de la ficha y del PDF (aunque la
+# búsqueda tenga procesos guardados de cuando estuvo activa; los datos no se
+# borran, solo dejan de mostrarse). Sirve para desplegar por etapas.
 CONSULTAR_PROCESOS_JUDICIALES = config('CONSULTAR_PROCESOS_JUDICIALES', default=True, cast=bool)
 
 # La API vive en el puerto 448 (el 443 sirve la SPA del portal, no la API).

@@ -359,3 +359,41 @@ class ProcesosJudicialesEnLaBusquedaTests(TestCase):
         mock_judicial.assert_not_called()
         self.assertEqual(Busqueda.objects.count(), 0)
         self.assertEqual(ProcesoJudicial.objects.count(), 0)
+class InterruptorJudicialTests(TestCase):
+    """CONSULTAR_PROCESOS_JUDICIALES=False debe apagar la feature EN TODO NIVEL:
+    no se consulta la Rama (probado arriba), la URL de detalle no existe y la
+    sección desaparece de la ficha y del contexto aunque haya datos guardados."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester', password='clave-larga-123')
+        self.client.force_login(self.user)
+        # Búsqueda con procesos guardados de cuando la feature estuvo activa.
+        self.busqueda = Busqueda.objects.create(
+            usuario=self.user, termino_buscado='Nombre: JUAN PEREZ',
+            judicial_estado='ok', judicial_total_reportado=1,
+        )
+        ProcesoJudicial.objects.create(
+            busqueda=self.busqueda, id_proceso='12345',
+            radicado='11001310300120240001', despacho='JUZGADO 1 PENAL',
+            categoria='Penal',
+        )
+
+    @override_settings(CONSULTAR_PROCESOS_JUDICIALES=False)
+    def test_url_de_detalle_da_404_con_el_flag_apagado(self):
+        # El 404 ocurre ANTES de tocar la red: no hace falta mockear la Rama.
+        resp = self.client.get(reverse('detalle_proceso_judicial', args=['12345']))
+        self.assertEqual(resp.status_code, 404)
+
+    @override_settings(CONSULTAR_PROCESOS_JUDICIALES=False)
+    def test_ficha_oculta_la_seccion_aunque_haya_datos(self):
+        resp = self.client.get(reverse('detalle_busqueda', args=[self.busqueda.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context['procesos_judiciales_activos'])
+        self.assertNotContains(resp, 'Procesos Judiciales')
+        self.assertNotContains(resp, '11001310300120240001')
+
+    @override_settings(CONSULTAR_PROCESOS_JUDICIALES=True)
+    def test_ficha_muestra_la_seccion_con_el_flag_encendido(self):
+        resp = self.client.get(reverse('detalle_busqueda', args=[self.busqueda.id]))
+        self.assertContains(resp, 'Procesos Judiciales')
+        self.assertContains(resp, '11001310300120240001')

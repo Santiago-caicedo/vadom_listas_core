@@ -264,6 +264,12 @@ consultado, tomados de la Consulta de Procesos Nacional Unificada.
   "mostrando X de Y" en vez de truncar en silencio.
 - La consulta ocurre dentro de la petición del analista: `CPNU_TIMEOUT` y
   `CPNU_REINTENTOS` acotan cuánto puede tardar la página si la Rama está caída.
+- **`CONSULTAR_PROCESOS_JUDICIALES` es un interruptor TOTAL por cliente**: en `False`
+  no se consulta la Rama, la URL `proceso-judicial/...` devuelve 404 y la sección
+  desaparece de la ficha y del PDF aunque haya procesos guardados (los datos no se
+  borran, solo dejan de mostrarse). Los templates lo reciben como
+  `procesos_judiciales_activos` (explícito en el contexto: el PDF se renderiza con
+  `render_to_string`, que no pasa por context processors).
 
 **Dónde se ve:** sección "Procesos Judiciales" en `detalle_busqueda.html` (con filtros por
 categoría y radicado enlazado al detalle), en el PDF (`reporte_pdf.html`) y la página

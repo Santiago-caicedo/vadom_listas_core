@@ -520,7 +520,7 @@
 {% endif %}
 
 {# ===================== PROCESOS JUDICIALES (Rama Judicial / CPNU) ===================== #}
-{% if busqueda.judicial_estado != 'no_consultado' %}
+{% if procesos_judiciales_activos and busqueda.judicial_estado != 'no_consultado' %}
 <style>
     .judicial-section { margin-top: 2rem; background: #fff; border: 1px solid #e9ecef;
         border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
