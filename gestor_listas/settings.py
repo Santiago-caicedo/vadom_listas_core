@@ -171,6 +171,18 @@ LOGOUT_REDIRECT_URL = '/cuentas/login/' # Lo enviamos de vuelta a la página de 
 API_TOKEN = config('API_TOKEN')
 API_BASE_URL = config('API_BASE_URL')
 
+# Tiempo de espera (segundos) por intento y número de intentos contra el
+# webservice de listas. El 21-sep-2026 el proveedor estuvo respondiendo en más
+# de 20 s de forma sostenida y los analistas vieron "servicio no disponible"
+# en cada consulta; además su servidor arranca en frío (primera petición
+# lentísima, la siguiente rápida), que es justo lo que un reintento resuelve.
+# Solo se reintenta ante timeout o error de conexión; un error de aplicación
+# del proveedor (MensajeError, HTTP 500) no se reintenta porque solo gastaría
+# cupo. Peor caso = API_REINTENTOS x API_TIMEOUT + 1 s de pausa: mantenerlo por
+# debajo de ~55 s, que es lo que aguanta el balanceador antes de cortar (504).
+API_TIMEOUT = config('API_TIMEOUT', default=25, cast=int)
+API_REINTENTOS = config('API_REINTENTOS', default=2, cast=int)
+
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',

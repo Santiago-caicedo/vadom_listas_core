@@ -72,6 +72,63 @@ class RealizarPeticionTests(TestCase):
         self.assertIsNone(services._realizar_peticion('http://x'))
 
 
+@override_settings(API_TIMEOUT=25, API_REINTENTOS=2)
+@patch('consultas.services.time.sleep', return_value=None)
+class ReintentosPeticionTests(TestCase):
+    """Reintentos ante proveedor lento (incidente 21-sep-2026: 10 timeouts
+    seguidos de 20 s). Solo se reintenta ante timeout/conexión; un error de
+    aplicación del proveedor no se reintenta porque solo gastaría cupo."""
+
+    OK = {'MensajeError': '', 'Resultados': [{'NombreCompleto': 'X'}]}
+
+    def _respuesta_ok(self):
+        from unittest.mock import MagicMock
+        r = MagicMock(); r.status_code = 200; r.json.return_value = self.OK
+        return r
+
+    @patch('consultas.services.requests.get')
+    def test_timeout_y_luego_ok_devuelve_lista(self, mock_get, _sleep):
+        # Arranque en frío del proveedor: la 1ª tarda demasiado, la 2ª responde.
+        mock_get.side_effect = [services.requests.exceptions.Timeout('lento'),
+                                self._respuesta_ok()]
+        self.assertEqual(services._realizar_peticion('http://x'), [{'NombreCompleto': 'X'}])
+        self.assertEqual(mock_get.call_count, 2)
+
+    @patch('consultas.services.requests.get')
+    def test_usa_el_timeout_configurado(self, mock_get, _sleep):
+        mock_get.return_value = self._respuesta_ok()
+        services._realizar_peticion('http://x')
+        self.assertEqual(mock_get.call_args.kwargs['timeout'], 25)
+
+    @patch('consultas.services.requests.get')
+    def test_timeout_en_todos_los_intentos_devuelve_none(self, mock_get, _sleep):
+        mock_get.side_effect = services.requests.exceptions.Timeout('lento')
+        self.assertIsNone(services._realizar_peticion('http://x'))
+        self.assertEqual(mock_get.call_count, 2)     # agotó API_REINTENTOS
+
+    @override_settings(API_REINTENTOS=3)
+    @patch('consultas.services.requests.get')
+    def test_reintentos_configurables(self, mock_get, _sleep):
+        mock_get.side_effect = services.requests.exceptions.ConnectionError('sin red')
+        self.assertIsNone(services._realizar_peticion('http://x'))
+        self.assertEqual(mock_get.call_count, 3)
+
+    @patch('consultas.services.requests.get')
+    def test_mensaje_error_no_se_reintenta(self, mock_get, _sleep):
+        # Error de aplicación del proveedor: reintentar solo gasta cupo.
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {'MensajeError': 'stored procedure', 'Resultados': []}
+        self.assertIsNone(services._realizar_peticion('http://x'))
+        self.assertEqual(mock_get.call_count, 1)
+
+    @patch('consultas.services.requests.get')
+    def test_http_500_no_se_reintenta(self, mock_get, _sleep):
+        mock_get.return_value.status_code = 500
+        mock_get.return_value.text = 'Internal Server Error'
+        self.assertIsNone(services._realizar_peticion('http://x'))
+        self.assertEqual(mock_get.call_count, 1)
+
+
 @override_settings(CONSULTAR_PROCESOS_JUDICIALES=False)
 class PaginaBusquedaFalloTests(TestCase):
     """La vista pagina_busqueda NO debe registrar un falso negativo si el servicio falla."""

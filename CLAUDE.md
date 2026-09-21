@@ -340,6 +340,12 @@ ADMIN_EMAIL=
 # Procesos judiciales (Rama Judicial / CPNU) — apagado por defecto
 CONSULTAR_PROCESOS_JUDICIALES=False
 # Opcionales (tienen defaults): CPNU_TIMEOUT, CPNU_REINTENTOS, CPNU_MAX_PAGINAS
+
+# Espera e intentos contra el webservice de listas (opcionales; defaults 25 s x 2).
+# Solo reintenta ante timeout/conexión, nunca ante MensajeError. Peor caso < 55 s
+# porque el balanceador corta a los 60 s.
+# API_TIMEOUT=25
+# API_REINTENTOS=2
 ```
 
 ---

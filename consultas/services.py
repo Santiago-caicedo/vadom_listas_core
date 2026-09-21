@@ -2,6 +2,7 @@
 
 import logging
 import re
+import time
 from urllib.parse import quote
 
 import requests
@@ -61,10 +62,41 @@ def _realizar_peticion(url):
     o respondió algo que no se puede interpretar. Devolver None es importante:
     la vista lo traduce en "servicio no disponible" y NO guarda la búsqueda,
     para no mostrarle al analista un falso "sin hallazgos".
-    """
-    try:
-        response = requests.get(url, timeout=20)
 
+    Reintenta SOLO ante timeout o error de conexión (el proveedor lento o
+    arrancando en frío): ahí un segundo intento suele responder. Un error de
+    aplicación del proveedor (HTTP != 200, MensajeError, cuerpo no-JSON) no se
+    reintenta: volver a preguntar solo gasta cupo y da lo mismo.
+    """
+    timeout = getattr(settings, 'API_TIMEOUT', 25)
+    intentos = max(1, getattr(settings, 'API_REINTENTOS', 2))
+
+    for intento in range(1, intentos + 1):
+        try:
+            response = requests.get(url, timeout=timeout)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            if intento < intentos:
+                logger.warning("El API de listas no respondió en %ss (intento %d/%d), reintentando: %s",
+                               timeout, intento, intentos, e)
+                time.sleep(1)
+                continue
+            logger.error("Error de conexión con el API de listas tras %d intentos: %s", intentos, e)
+            return None
+        except requests.exceptions.RequestException as e:
+            logger.error("Error de conexión con el API de listas: %s", e)
+            return None
+        except Exception:
+            logger.exception("Fallo inesperado consultando el API de listas")
+            return None
+
+        return _interpretar_respuesta(response)
+
+    return None
+
+
+def _interpretar_respuesta(response):
+    """Traduce la respuesta HTTP del proveedor a lista de resultados o None."""
+    try:
         if response.status_code != 200:
             logger.error("El API de listas respondió %s: %s",
                          response.status_code, response.text[:300])
@@ -98,13 +130,10 @@ def _realizar_peticion(url):
 
         return _sanear(resultados)
 
-    except requests.exceptions.RequestException as e:
-        logger.error("Error de conexión con el API de listas: %s", e)
-        return None
     except Exception:
         # Red de seguridad: ante CUALQUIER otra cosa inesperada preferimos
         # decir "servicio no disponible" antes que tumbar la consulta.
-        logger.exception("Fallo inesperado consultando el API de listas")
+        logger.exception("Fallo inesperado interpretando la respuesta del API de listas")
         return None
 
 
