@@ -341,11 +341,12 @@ ADMIN_EMAIL=
 CONSULTAR_PROCESOS_JUDICIALES=False
 # Opcionales (tienen defaults): CPNU_TIMEOUT, CPNU_REINTENTOS, CPNU_MAX_PAGINAS
 
-# Espera e intentos contra el webservice de listas (opcionales; defaults 25 s x 2).
-# Solo reintenta ante timeout/conexión, nunca ante MensajeError. Peor caso < 55 s
-# porque el balanceador corta a los 60 s.
-# API_TIMEOUT=25
-# API_REINTENTOS=2
+# Espera e intentos contra el webservice de listas (opcionales; defaults 55 s x 1).
+# SIDIF tarda 48-60 s la primera vez con un ID con guion (NIT con DV). El techo
+# lo pone el balanceador (60 s); con el ALB en 120 s usar API_TIMEOUT=90.
+# Solo reintenta ante timeout/conexión, nunca ante MensajeError.
+# API_TIMEOUT=55
+# API_REINTENTOS=1
 ```
 
 ---

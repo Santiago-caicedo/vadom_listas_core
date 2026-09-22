@@ -70,7 +70,7 @@ los despliegues: cliente, carpeta, dominio, prefijo S3, servicio systemd. Lo con
 | `NOTIFICAR_HALLAZGOS` | Email a superiores cuando una búsqueda tiene hallazgos (default True) |
 | `DEBUG` | False = estáticos en S3 (producción); True = local (desarrollo) |
 | `S3_CLIENT_PREFIX` | Carpeta del cliente en el bucket S3 |
-| `API_TIMEOUT` / `API_REINTENTOS` | Espera por intento y reintentos ante timeout del webservice de listas (default 25 s × 2; peor caso < 55 s por el balanceador) |
+| `API_TIMEOUT` / `API_REINTENTOS` | Espera por intento y reintentos ante timeout del webservice de listas (default 55 s × 1: el balanceador corta a los 60 s; con el ALB en 120 s usar 90) |
 
 ## Gotchas de despliegue
 

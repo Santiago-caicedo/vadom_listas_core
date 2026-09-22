@@ -68,8 +68,8 @@ def _realizar_peticion(url):
     aplicación del proveedor (HTTP != 200, MensajeError, cuerpo no-JSON) no se
     reintenta: volver a preguntar solo gasta cupo y da lo mismo.
     """
-    timeout = getattr(settings, 'API_TIMEOUT', 25)
-    intentos = max(1, getattr(settings, 'API_REINTENTOS', 2))
+    timeout = getattr(settings, 'API_TIMEOUT', 55)
+    intentos = max(1, getattr(settings, 'API_REINTENTOS', 1))
 
     for intento in range(1, intentos + 1):
         try:
